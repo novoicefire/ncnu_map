@@ -1,0 +1,1702 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>地圖節點編輯器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+      #map { flex: 1; z-index: 1; }
+      
+      /* Sidebar Base */
+      #sidebar { width: 400px; display: flex; flex-direction: column; border-left: 1px solid #e2e8f0; background: #f8fafc; position: relative; z-index: 10; font-size: 14px; }
+      
+      /* Custom Scrollbar for lists */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      
+      /* Node Item Hover Effects */
+      .node-item { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid transparent; }
+      .node-item:hover { border-color: #cbd5e1; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transform: translateY(-1px); }
+      .node-item.active { border-color: #94a3b8; background: #f1f5f9; box-shadow: inset 3px 0 0 #3b82f6; }
+      
+      /* Sliding Overlay Panel */
+      #edit-panel { 
+        position: absolute; inset: 0; background: #ffffff; 
+        transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; z-index: 30;
+        box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+      }
+      #edit-panel.show { transform: translateX(0); }
+      #edit-panel-content { flex: 1; overflow-y: auto; padding: 20px; }
+      
+      /* Modern Toggle Switch */
+      .toggle-checkbox { top: 0; left: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+      .toggle-checkbox:checked { transform: translateX(100%); border-color: #3b82f6; }
+      .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
+      .toggle-label { width: 2.5rem; height: 1.25rem; background-color: #e2e8f0; border-radius: 9999px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+      /* Visual hints */
+      .hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 1000;
+        background: rgba(15, 23, 42, 0.9); color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 500;
+        pointer-events: none; transition: opacity 0.3s, transform 0.3s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); backdrop-filter: blur(4px); }
+      /* Polygon edit action bar */
+      #poly-bar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 1000;
+        background: rgba(15, 23, 42, 0.92); color: #fff; padding: 8px 16px; border-radius: 12px; font-size: 13px;
+        display: none; align-items: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); backdrop-filter: blur(4px); white-space: nowrap; }
+      #poly-bar.show { display: flex; }
+      #poly-bar button { padding: 3px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
+      #poly-bar .btn-confirm { background: #22c55e; color: #fff; }
+      #poly-bar .btn-confirm:hover { background: #16a34a; }
+      #poly-bar .btn-cancel { background: rgba(255,255,255,0.15); color: #fff; }
+      #poly-bar .btn-cancel:hover { background: rgba(255,255,255,0.25); }
+      
+      /* Grab cursor for map */
+      .leaflet-interactive { cursor: grab !important; }
+      .leaflet-interactive:active { cursor: grabbing !important; }
+
+      /* Batch Delete Modal */
+      #batch-delete-overlay, #building-manager-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999;
+        display: none; align-items: center; justify-content: center;
+        backdrop-filter: blur(3px);
+      }
+      #batch-delete-overlay.active, #building-manager-overlay.active { display: flex; }
+      #batch-delete-modal {
+        background: #fff; border-radius: 16px; width: 420px; max-height: 80vh;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        display: flex; flex-direction: column; overflow: hidden;
+        animation: modalIn 0.2s ease-out;
+      }
+      @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: none; } }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="hint" class="hint" style="opacity:0">點擊地圖設定節點座標</div>
+    <div id="poly-bar">
+      <span id="poly-bar-text"></span>
+      <button class="btn-confirm" onclick="confirmPolygonEdit()"><i class="fa-solid fa-check mr-1"></i>完成</button>
+      <button class="btn-cancel" onclick="cancelPolygonEdit()">取消</button>
+    </div>
+
+    <!-- ===== 批量刪除 Modal ===== -->
+    <div id="batch-delete-overlay" onclick="if(event.target===this)closeBatchDelete()">
+      <div id="batch-delete-modal">
+        <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-red-50">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600"><i class="fa-solid fa-filter-circle-xmark"></i></div>
+            <span class="font-bold text-gray-800 text-base">批量刪除節點</span>
+          </div>
+          <button onclick="closeBatchDelete()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">&times;</button>
+        </div>
+        <div class="p-5 space-y-4 overflow-y-auto flex-1">
+          <p class="text-xs text-gray-500">以下篩選條件為「<strong>疊加 (AND)</strong>」邏輯—勾選越多越嚴格。留空表示不限制該條件。</p>
+
+          <!-- 條件 1: 樓層 -->
+          <div>
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">樓層 (Floors)</label>
+            <div id="bd-floors" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <!-- 條件 2: 類型 -->
+          <div>
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">節點類型 (Type)</label>
+            <div id="bd-types" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <!-- 條件 3: 名稱包含 -->
+          <div>
+            <label class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 block">名稱包含 (Name Contains)</label>
+            <input id="bd-name" type="text" placeholder="例: 走廊路徑點" oninput="updateBatchPreview()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 outline-none" />
+          </div>
+
+          <!-- 預覽結果 -->
+          <div class="bg-gray-50 rounded-xl border border-gray-200 p-3">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">符合條件的節點</span>
+              <span id="bd-count" class="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full">0 個</span>
+            </div>
+            <div id="bd-preview" class="max-h-[180px] overflow-y-auto space-y-1 text-xs"></div>
+          </div>
+        </div>
+        <div class="px-5 py-4 border-t border-gray-200 bg-gray-50 flex gap-3">
+          <button onclick="closeBatchDelete()" class="flex-1 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">取消</button>
+          <button id="bd-confirm-btn" onclick="executeBatchDelete()" disabled class="flex-1 py-2.5 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+            <i class="fa-solid fa-trash-can"></i> 確認刪除
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 建築管理 Modal ===== -->
+    <div id="building-manager-overlay" onclick="if(event.target===this)closeBuildingManager()">
+      <div id="batch-delete-modal">
+        <!-- 標頭 -->
+        <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-blue-50">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-building text-blue-500"></i>
+            <span class="font-bold text-gray-800">建築管理</span>
+          </div>
+          <button onclick="closeBuildingManager()" class="w-8 h-8 rounded-full bg-white text-gray-400 hover:text-gray-700 flex items-center justify-center text-sm border border-gray-200">&times;</button>
+        </div>
+        <!-- 建築列表 -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">現有建築</p>
+          <div id="bm-list" class="space-y-2 mb-4"></div>
+          <!-- 新增建築 -->
+          <div class="border-t border-gray-100 pt-4">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">新增建築</p>
+            <div class="space-y-2">
+              <input id="bm-new-name" type="text" placeholder="建築名稱（例：管理學院）"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              <input id="bm-new-id" type="text" placeholder="建築 ID（例：mgmt，英數字）"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
+              <button onclick="startPolygonEdit(null)"
+                class="w-full py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-draw-polygon"></i>
+                <span id="bm-bounds-label">在地圖上繪製邊界多邊形</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- 底部按鈕 -->
+        <div class="px-5 py-4 border-t border-gray-200 bg-gray-50 flex gap-3">
+          <button onclick="closeBuildingManager()" class="flex-1 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">關閉</button>
+          <button onclick="addBuilding()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plus"></i> 新增建築
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <header class="p-4 border-b border-gray-200 bg-white z-10 shrink-0 shadow-sm">
+        <h1 class="text-lg font-bold text-gray-800">地圖節點編輯器</h1>
+        <p class="text-[11px] text-gray-500 mt-0.5">點擊地圖設定座標 · 右側面板編輯屬性</p>
+        <div class="flex gap-2 mt-3">
+          <select id="floor-filter" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" onchange="renderAll()">
+            <option value="all">全部樓層</option>
+          </select>
+          <button onclick="addNode()" class="text-sm bg-slate-700 text-white px-3.5 py-1.5 rounded-lg hover:bg-slate-800 transition-colors shadow-sm font-medium whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>節點</button>
+          <button onclick="toggleDrawCorridor()" id="draw-corridor-btn" class="text-sm bg-amber-500 text-white px-3.5 py-1.5 rounded-lg hover:bg-amber-600 transition-colors shadow-sm font-medium whitespace-nowrap">
+            <i class="fa-solid fa-pen mr-1"></i>畫走廊
+          </button>
+          <button onclick="openBuildingManager()" class="text-sm bg-blue-600 text-white px-3.5 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium whitespace-nowrap">
+            <i class="fa-solid fa-building mr-1"></i>建築
+          </button>
+        </div>
+      </header>
+
+      <div id="node-list"></div>
+
+      <div id="edit-panel">
+        <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/80 backdrop-blur-sm sticky top-0 z-10">
+          <span class="font-bold text-gray-800 text-base"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>編輯節點</span>
+          <button onclick="closeEditPanel()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shadow-sm">&times;</button>
+        </div>
+        
+        <div id="edit-panel-content" class="space-y-6">
+          <!-- 區塊 1：基本資訊 -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">基本資訊</h3>
+            <div>
+              <label class="text-xs text-gray-500 mb-1 block">節點 ID</label>
+              <input id="edit-id" readonly class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 font-mono" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-600 mb-1 block">名稱</label>
+              <input id="edit-name" oninput="updateField('name', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">類型</label>
+                <select id="edit-type" onchange="updateField('type', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                  <option value="entrance">🚪 出入口</option>
+                  <option value="corridor">🚶 走廊</option>
+                  <option value="elevator">🛗 電梯</option>
+                  <option value="staircase">🪜 樓梯</option>
+                  <option value="wc">🚻 洗手間</option>
+                  <option value="office">💼 辦公室</option>
+                  <option value="classroom">🎓 教室</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">顯示樓層</label>
+                <div class="relative">
+                  <input id="edit-floors" type="text" placeholder="例: 1, 2, 3F" oninput="updateFloorsField(this.value)" class="w-full border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none placeholder-gray-300" />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">F</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 區塊 2：地理座標 -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">地理座標</h3>
+              <button onclick="startPickCoord()" class="text-xs flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors">
+                <i class="fa-solid fa-crosshairs"></i> 從地圖點選
+              </button>
+            </div>
+            <div class="flex gap-3">
+              <div class="flex-1">
+                <label class="text-xs text-gray-500 mb-1 block">緯度 (Lat)</label>
+                <input id="edit-lat" type="number" step="0.00001" oninput="updateCoord()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono" />
+              </div>
+              <div class="flex-1">
+                <label class="text-xs text-gray-500 mb-1 block">經度 (Lng)</label>
+                <input id="edit-lng" type="number" step="0.00001" oninput="updateCoord()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 區塊 3：進階設定 (Toggles) -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">進階屬性</h3>
+            
+            <label class="flex items-center justify-between cursor-pointer group">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-600"><i class="fa-solid fa-map-pin"></i></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-700">標記為 POI</div>
+                  <div class="text-[11px] text-gray-400">可被搜尋與設為起終點</div>
+                </div>
+              </div>
+              <div class="relative inline-block w-10 h-5">
+                <input type="checkbox" id="edit-poi" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer m-0" onchange="updateField('isPOI', this.checked)"/>
+                <label for="edit-poi" class="toggle-label block overflow-hidden cursor-pointer"></label>
+              </div>
+            </label>
+
+            <label id="ground-level-section" class="flex items-center justify-between cursor-pointer group" style="display:none;">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><i class="fa-solid fa-tree"></i></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-700">地面可達入口</div>
+                  <div class="text-[11px] text-gray-400">建築物外可直接步行到達</div>
+                </div>
+              </div>
+              <div class="relative inline-block w-10 h-5">
+                <input type="checkbox" id="edit-ground" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer m-0" onchange="updateField('isGroundLevel', this.checked)"/>
+                <label for="edit-ground" class="toggle-label block overflow-hidden cursor-pointer"></label>
+              </div>
+            </label>
+          </div>
+
+
+          <!-- 區塊 4：所屬建築 -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">所屬建築</h3>
+            <select id="edit-building" onchange="updateBuildingField(this.value)"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+              <option value="">— 未分配 —</option>
+            </select>
+          </div>
+
+          <!-- 區塊 5：連接邊 -->
+          <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 flex justify-between items-center bg-gray-50/50 border-b border-gray-100">
+              <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">連接邊</h3>
+              <div class="flex items-center gap-2">
+                <label id="outdoor-toggle-label" class="hidden items-center gap-1.5 text-xs text-green-700 font-medium cursor-pointer select-none">
+                  <input type="checkbox" id="add-edge-outdoor" class="accent-green-600 w-3.5 h-3.5">
+                  室外走道
+                </label>
+                <button onclick="startAddEdge()" id="add-edge-btn" class="text-xs bg-slate-700 text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition-colors shadow-sm font-medium"><i class="fa-solid fa-plus mr-1"></i>連接線</button>
+              </div>
+            </div>
+            <div id="edge-list" class="p-2 space-y-1 max-h-[200px] overflow-y-auto"></div>
+          </div>
+
+          <!-- 區塊 5：危險操作 -->
+          <div class="pt-4 border-t border-gray-100">
+            <button onclick="deleteNode()" class="w-full py-3 bg-white border-2 border-red-100 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 hover:border-red-200 active:bg-red-100 transition-colors flex items-center justify-center gap-2">
+              <i class="fa-solid fa-trash-can"></i> 刪除此節點
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="toolbar" class="p-4 border-t border-gray-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20 shrink-0 flex flex-col gap-2">
+        <div class="flex gap-2">
+          <button onclick="saveToFile()" class="flex-1 bg-slate-600 hover:bg-slate-700 active:bg-slate-800 text-white py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+            <i class="fa-solid fa-floppy-disk text-slate-300"></i> 儲存
+          </button>
+          <button onclick="openBatchDelete()" class="px-3 py-2.5 bg-white border-2 border-red-200 text-red-500 rounded-xl text-sm font-medium hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm flex items-center justify-center gap-1.5" title="批量刪除">
+            <i class="fa-solid fa-filter-circle-xmark"></i>
+          </button>
+        </div>
+        <div class="flex justify-center h-4">
+          <span id="save-status" class="text-[11px] text-emerald-600 font-medium transition-opacity opacity-0 duration-300 flex items-center gap-1"><i class="fa-solid fa-check"></i>已儲存變更</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const MAP_CENTER = [23.9515, 120.9252];
+      let nodes = [];
+      let edges = [];
+      let buildings = [];
+      let selectedNodeId = null;
+      let pickingCoord = false;
+      let addingEdge = false;
+      let edgeSourceId = null;
+      let markers = {};
+      let edgeLines = [];
+      let buildingLayers = [];
+      let drawingCorridor = false;
+      let corridorPoints = [];
+      // Polygon edit state
+      let polygonEditActive = false;
+      let polygonEditVertices = [];   // [[lat,lng], ...]
+      let polygonEditMarkers = [];    // L.marker instances (draggable vertex handles)
+      let polygonPreviewLayer = null; // L.polygon preview during editing
+      let editingBuildingId = null;   // null = new building, string = existing building id
+      let corridorPreviewLine = null;
+
+      const typeNameMap = { elevator:'電梯', wc:'洗手間', entrance:'出入口', office:'辦公室', corridor:'走廊', staircase:'樓梯', classroom:'教室' };
+      const typeIcons = { elevator:'fa-elevator', wc:'fa-restroom', entrance:'fa-door-open', office:'fa-building', corridor:'fa-road', staircase:'fa-stairs', classroom:'fa-chalkboard' };
+
+      // === Map ===
+      const map = L.map("map", { zoomControl: true }).setView(MAP_CENTER, 19);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 22,
+        maxNativeZoom: 19,
+        attribution: "&copy; OpenStreetMap",
+      }).addTo(map);
+
+      // === Map click ===
+      map.on('click', function(e) {
+        // 建築邊界多邊形繪製模式（最高優先）
+        if (polygonEditActive) {
+          const latlng = [parseFloat(e.latlng.lat.toFixed(6)), parseFloat(e.latlng.lng.toFixed(6))];
+          // 如果已有 ≥3 個點且點擊接近第一點，則閉合多邊形
+          if (polygonEditVertices.length >= 3) {
+            const firstPt = polygonEditVertices[0];
+            const d = map.latLngToLayerPoint(e.latlng).distanceTo(map.latLngToLayerPoint(firstPt));
+            if (d < 20) {
+              confirmPolygonEdit();
+              return;
+            }
+          }
+          polygonEditVertices.push(latlng);
+          renderPolygonEdit();
+          updatePolyBar();
+          return;
+        }
+
+        if (drawingCorridor) {
+          const latlng = [parseFloat(e.latlng.lat.toFixed(6)), parseFloat(e.latlng.lng.toFixed(6))];
+          const floorFilter = document.getElementById('floor-filter').value;
+          const floor = floorFilter !== 'all' ? parseInt(floorFilter) : 1;
+
+          // Check if clicking near an existing node (snap to it)
+          let snappedNode = null;
+          nodes.forEach(n => {
+            if (!n.floors.includes(floor)) return;
+            const d = map.latLngToLayerPoint(n.coordinates).distanceTo(map.latLngToLayerPoint(latlng));
+            if (d < 20 && (!snappedNode || d < map.latLngToLayerPoint(snappedNode.coordinates).distanceTo(map.latLngToLayerPoint(latlng)))) {
+              snappedNode = n;
+            }
+          });
+
+          let nodeId;
+          if (snappedNode) {
+            nodeId = snappedNode.id;
+          } else {
+            // 嘗試吸附到走廊線段（在線段中間插入分叉點）
+            let snappedEdge = null, bestEdgeDist = Infinity, bestProjLatlng = null, bestEdgeIdx = -1;
+            edges.forEach((edge, idx) => {
+              if (edge.isVertical) return;
+              const sNode = nodes.find(n => n.id === edge.source);
+              const tNode = nodes.find(n => n.id === edge.target);
+              if (!sNode || !tNode) return;
+              if (!sNode.floors.includes(floor) && !tNode.floors.includes(floor)) return;
+              // 用螢幕像素距離判斷
+              const sPx = map.latLngToLayerPoint(sNode.coordinates);
+              const tPx = map.latLngToLayerPoint(tNode.coordinates);
+              const cPx = map.latLngToLayerPoint(latlng);
+              // 點到線段的像素距離
+              const dx = tPx.x - sPx.x, dy = tPx.y - sPx.y;
+              const lenSq = dx * dx + dy * dy;
+              if (lenSq === 0) return;
+              let t = ((cPx.x - sPx.x) * dx + (cPx.y - sPx.y) * dy) / lenSq;
+              t = Math.max(0, Math.min(1, t));
+              const projPx = { x: sPx.x + t * dx, y: sPx.y + t * dy };
+              const dist = Math.sqrt((cPx.x - projPx.x) ** 2 + (cPx.y - projPx.y) ** 2);
+              if (dist < 20 && dist < bestEdgeDist) {
+                bestEdgeDist = dist;
+                bestEdgeIdx = idx;
+                // 用 t 插值回經緯度
+                const lat = sNode.coordinates[0] + t * (tNode.coordinates[0] - sNode.coordinates[0]);
+                const lng = sNode.coordinates[1] + t * (tNode.coordinates[1] - sNode.coordinates[1]);
+                bestProjLatlng = [parseFloat(lat.toFixed(6)), parseFloat(lng.toFixed(6))];
+                snappedEdge = edge;
+              }
+            });
+
+            if (snappedEdge && bestProjLatlng) {
+              // 在線段上插入新節點並拆分邊
+              nodeId = 'wp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+              nodes.push({
+                id: nodeId,
+                name: '走廊路徑點',
+                type: 'corridor',
+                floors: [floor],
+                coordinates: bestProjLatlng,
+                isPOI: false,
+              });
+              // 拆分原始邊
+              const origSource = snappedEdge.source;
+              const origTarget = snappedEdge.target;
+              edges.splice(bestEdgeIdx, 1);
+              edges.push({ source: origSource, target: nodeId, isVertical: false });
+              edges.push({ source: nodeId, target: origTarget, isVertical: false });
+            } else {
+              // 完全新建節點
+              nodeId = 'wp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+              nodes.push({
+                id: nodeId,
+                name: '走廊路徑點',
+                type: 'corridor',
+                floors: [floor],
+                coordinates: latlng,
+                isPOI: false,
+              });
+            }
+          }
+
+          // Connect to previous point
+          if (corridorPoints.length > 0) {
+            const prevId = corridorPoints[corridorPoints.length - 1].id;
+            if (prevId !== nodeId) {
+              const exists = edges.some(e =>
+                (e.source === prevId && e.target === nodeId) ||
+                (e.source === nodeId && e.target === prevId)
+              );
+              if (!exists) {
+                edges.push({ source: prevId, target: nodeId, isVertical: false });
+              }
+            }
+          }
+
+          corridorPoints.push({ id: nodeId, latlng: snappedNode ? snappedNode.coordinates : latlng });
+
+          // Update preview line
+          if (corridorPreviewLine) map.removeLayer(corridorPreviewLine);
+          if (corridorPoints.length > 1) {
+            corridorPreviewLine = L.polyline(corridorPoints.map(p => p.latlng), {
+              color: '#f59e0b', weight: 4, opacity: 0.8,
+            }).addTo(map);
+          }
+
+          document.getElementById('hint').textContent =
+            `走廊繪製中 (${corridorPoints.length} 點) — 繼續點擊地圖，或按「完成」結束`;
+          renderAll();
+          return;
+        }
+
+        if (pickingCoord && selectedNodeId) {
+          const node = nodes.find(n => n.id === selectedNodeId);
+          if (node) {
+            node.coordinates = [parseFloat(e.latlng.lat.toFixed(6)), parseFloat(e.latlng.lng.toFixed(6))];
+            document.getElementById('edit-lat').value = node.coordinates[0];
+            document.getElementById('edit-lng').value = node.coordinates[1];
+            pickingCoord = false;
+            document.getElementById('hint').style.opacity = '0';
+            renderAll();
+          }
+          return;
+        }
+
+        if (addingEdge) {
+          // Find closest node to click
+          let closest = null, minDist = Infinity;
+          const floorFilter = document.getElementById('floor-filter').value;
+          nodes.forEach(n => {
+            if (floorFilter !== 'all' && !n.floors.includes(parseInt(floorFilter))) return;
+            const d = map.latLngToLayerPoint(n.coordinates).distanceTo(map.latLngToLayerPoint([e.latlng.lat, e.latlng.lng]));
+            if (d < minDist) { minDist = d; closest = n; }
+          });
+          if (!closest || minDist > 30) return;
+
+          if (!edgeSourceId) {
+            edgeSourceId = closest.id;
+            if (markers[closest.id]) markers[closest.id].setStyle({ color: '#ef4444', fillColor: '#ef4444' });
+            document.getElementById('hint').textContent = `已選起點: ${closest.name}，再點擊終點節點`;
+          } else {
+            if (closest.id !== edgeSourceId) {
+              const exists = edges.some(e =>
+                (e.source === edgeSourceId && e.target === closest.id) ||
+                (e.source === closest.id && e.target === edgeSourceId)
+              );
+              if (!exists) {
+                const sNode = nodes.find(n => n.id === edgeSourceId);
+                const tNode = closest;
+                const isOutdoor = document.getElementById('add-edge-outdoor').checked;
+                const newEdge = { source: edgeSourceId, target: closest.id };
+                if (isOutdoor) {
+                  newEdge.isOutdoor = true;
+                } else {
+                  newEdge.isVertical = !sNode.floors.some(f => tNode.floors.includes(f));
+                  if (newEdge.isVertical) newEdge.verticalPenalty = 150;
+                }
+                edges.push(newEdge);
+              }
+            }
+            addingEdge = false;
+            edgeSourceId = null;
+            document.getElementById('hint').style.opacity = '0';
+            document.getElementById('add-edge-btn').textContent = '+ 新增邊';
+            renderAll();
+          }
+          return;
+        }
+      });
+
+      // === Render ===
+      function renderAll() {
+        renderMarkers();
+        renderNodeList();
+        renderEdgeList();
+        updateFloorOptions();
+      }
+
+      // --- 拖曳狀態 ---
+      let draggingNode = null;  // 正在拖曳的節點物件
+      let dragStarted = false;  // 區分 click 與 drag
+
+      function renderMarkers() {
+        // Clear old
+        Object.values(markers).forEach(m => map.removeLayer(m));
+        markers = {};
+        edgeLines.forEach(l => map.removeLayer(l));
+        edgeLines = [];
+
+        const floorFilter = document.getElementById('floor-filter').value;
+
+        edges.forEach(e => {
+          const sNode = nodes.find(n => n.id === e.source);
+          const tNode = nodes.find(n => n.id === e.target);
+          if (!sNode || !tNode) return;
+          if (floorFilter !== 'all') {
+            const f = parseInt(floorFilter);
+            if (e.isVertical) {
+              // 垂直邊：任一端在當前樓層就顯示
+              if (!sNode.floors.includes(f) && !tNode.floors.includes(f)) return;
+            } else {
+              // 水平邊：兩端都必須在當前樓層才顯示
+              if (!sNode.floors.includes(f) || !tNode.floors.includes(f)) return;
+            }
+          }
+          const line = L.polyline([sNode.coordinates, tNode.coordinates], {
+            color: e.isOutdoor ? '#16a34a' : e.isVertical ? '#f59e0b' : '#94a3b8',
+            weight: 3,
+            opacity: 0.6,
+            dashArray: e.isOutdoor ? '8 4' : e.isVertical ? '6 4' : null,
+          }).addTo(map);
+          edgeLines.push(line);
+        });
+
+        // Draw nodes
+        nodes.forEach(n => {
+          if (floorFilter !== 'all' && !n.floors.includes(parseInt(floorFilter))) return;
+          const isSelected = n.id === selectedNodeId;
+          const color = isSelected ? '#708191' : (n.isPOI ? '#22c55e' : '#94a3b8');
+          const marker = L.circleMarker(n.coordinates, {
+            radius: isSelected ? 10 : 7,
+            fillColor: color,
+            color: isSelected ? '#334155' : color,
+            weight: isSelected ? 3 : 2,
+            fillOpacity: 0.8,
+          }).addTo(map);
+
+          marker.bindTooltip(`${n.name} (${n.floors.sort().join(',')}F)`, { direction: 'top', offset: [0, -8] });
+
+          // --- 拖曳 + 點擊處理 ---
+          marker.on('mousedown', function(ev) {
+            if (drawingCorridor || addingEdge) return;
+            L.DomEvent.stopPropagation(ev);
+            L.DomEvent.preventDefault(ev);
+            draggingNode = n;
+            dragStarted = false;
+            map.dragging.disable();
+            marker.closeTooltip();
+          });
+
+          marker.on('click', function(ev) {
+            L.DomEvent.stopPropagation(ev);
+            if (drawingCorridor || addingEdge) {
+              map.fire('click', { latlng: L.latLng(n.coordinates) });
+              return;
+            }
+            // 只有非拖曳時才觸發選取
+            if (!dragStarted) selectNode(n.id);
+          });
+
+          markers[n.id] = marker;
+        });
+      }
+
+      // === 全域拖曳事件 ===
+      map.on('mousemove', function(ev) {
+        if (!draggingNode) return;
+        dragStarted = true;
+        const newLatLng = [parseFloat(ev.latlng.lat.toFixed(6)), parseFloat(ev.latlng.lng.toFixed(6))];
+        draggingNode.coordinates = newLatLng;
+
+        // 即時更新 marker 位置
+        if (markers[draggingNode.id]) {
+          markers[draggingNode.id].setLatLng(newLatLng);
+        }
+
+        // 即時更新連接的邊線
+        edgeLines.forEach(l => map.removeLayer(l));
+        edgeLines = [];
+        const floorFilter = document.getElementById('floor-filter').value;
+        edges.forEach(e => {
+          const sNode = nodes.find(nd => nd.id === e.source);
+          const tNode = nodes.find(nd => nd.id === e.target);
+          if (!sNode || !tNode) return;
+          if (floorFilter !== 'all') {
+            const f = parseInt(floorFilter);
+            if (e.isVertical) {
+              if (!sNode.floors.includes(f) && !tNode.floors.includes(f)) return;
+            } else {
+              if (!sNode.floors.includes(f) || !tNode.floors.includes(f)) return;
+            }
+          }
+          const line = L.polyline([sNode.coordinates, tNode.coordinates], {
+            color: e.isVertical ? '#f59e0b' : '#94a3b8',
+            weight: 3, opacity: 0.6,
+            dashArray: e.isVertical ? '6 4' : null,
+          }).addTo(map);
+          edgeLines.push(line);
+        });
+
+        // 即時更新編輯面板座標
+        if (draggingNode.id === selectedNodeId) {
+          document.getElementById('edit-lat').value = newLatLng[0];
+          document.getElementById('edit-lng').value = newLatLng[1];
+        }
+      });
+
+      map.on('mouseup', function() {
+        if (!draggingNode) return;
+        map.dragging.enable();
+        if (dragStarted) {
+          const movedNode = draggingNode;
+          // 需要重連的條件：非走廊節點，或 id 以 'node_' 開頭的使用者新增走廊節點
+          // wp_ (手繪走廊點) 和 vp_ (自動投影點) 拖曳時不重連，邊直接跟著移動
+          const shouldReconnect = movedNode.type !== 'corridor' || movedNode.id.startsWith('node_');
+          if (shouldReconnect) {
+            edges = edges.filter(e => {
+              if (e.isVertical) return true;
+              if (e.source !== movedNode.id && e.target !== movedNode.id) return true;
+              const otherId = e.source === movedNode.id ? e.target : e.source;
+              // 移除自動投影VP的連線（無論節點類型）
+              if (otherId.startsWith('vp_')) return false;
+              // 非走廊節點：也移除到其他走廊節點的連線
+              if (movedNode.type !== 'corridor') {
+                const other = nodes.find(n => n.id === otherId);
+                if (other && other.type === 'corridor') return false;
+              }
+              return true;
+            });
+            movedNode.floors.forEach(f => {
+              const hasEdgeOnFloor = edges.some(e => {
+                if (e.source !== movedNode.id && e.target !== movedNode.id) return false;
+                if (e.isVertical) return false;
+                const other = nodes.find(n => n.id === (e.source === movedNode.id ? e.target : e.source));
+                return other && other.type === 'corridor' && other.floors.includes(f);
+              });
+              if (!hasEdgeOnFloor) autoConnectOnFloor(movedNode.id, f);
+            });
+            const detectedBuilding = getNodeBuilding(movedNode.coordinates);
+            if (detectedBuilding !== null) movedNode.building = detectedBuilding;
+            cleanUpUnusedWaypoints();
+          }
+          renderAll();
+        }
+        draggingNode = null;
+        dragStarted = false;
+      });
+
+      function renderNodeList() {
+        const list = document.getElementById('node-list');
+        const floorFilter = document.getElementById('floor-filter').value;
+        const filtered = floorFilter === 'all' ? nodes : nodes.filter(n => n.floors.includes(parseInt(floorFilter)));
+        
+        list.className = 'flex-1 overflow-y-auto p-4 space-y-2';
+        
+        list.innerHTML = filtered.map(n => `
+          <div class="node-item group relative pl-3 pr-4 py-3 rounded-xl border border-transparent hover:border-gray-200 bg-white shadow-sm transition-all duration-200 cursor-pointer ${n.id === selectedNodeId ? 'ring-2 ring-blue-500 border-transparent bg-blue-50/30' : ''}" onclick="selectNode('${n.id}')">
+            ${n.id === selectedNodeId ? '<div class="absolute inset-y-0 left-0 w-1 bg-blue-500 rounded-l-xl"></div>' : ''}
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-white group-hover:shadow-sm transition-colors text-gray-500">
+                <i class="fa-solid ${typeIcons[n.type] || 'fa-location-dot'} text-[13px]"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-[13px] font-bold text-gray-800 truncate">${n.name}</span>
+                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-gray-500 bg-gray-100">${n.floors.sort().join(',')}F</span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[10px] text-gray-400 font-mono tracking-tighter">[${n.coordinates[0].toFixed(5)}, ${n.coordinates[1].toFixed(5)}]</span>
+                  ${n.isPOI ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-green-700 bg-green-100 whitespace-nowrap"><i class="fa-solid fa-map-pin mr-0.5"></i>POI</span>' : ''}
+                  ${n.isGroundLevel ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-emerald-700 bg-emerald-100 whitespace-nowrap"><i class="fa-solid fa-tree mr-0.5"></i>地面</span>' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function renderEdgeList() {
+        const list = document.getElementById('edge-list');
+        if (!list) return;
+
+        if (!selectedNodeId) {
+          list.innerHTML = '<p class="text-[11px] text-gray-400 text-center py-3">選取節點以查看連接邊</p>';
+          return;
+        }
+
+        const connected = edges
+          .map((e, i) => ({ e, i }))
+          .filter(({ e }) => e.source === selectedNodeId || e.target === selectedNodeId);
+
+        if (connected.length === 0) {
+          list.innerHTML = '<p class="text-[11px] text-gray-400 text-center py-3">尚無連接邊</p>';
+          return;
+        }
+
+        list.innerHTML = connected.map(({ e, i }) => {
+          const otherId = e.source === selectedNodeId ? e.target : e.source;
+          const otherNode = nodes.find(n => n.id === otherId);
+          const otherName = otherNode?.name || otherId;
+          const isOutdoor = e.isOutdoor;
+          const isVert = e.isVertical;
+          const iconClass = isOutdoor ? 'fa-person-walking text-green-500' : isVert ? 'fa-arrow-up-down text-amber-500' : 'fa-arrow-right-arrow-left text-gray-300';
+          const badge = isOutdoor
+            ? '<span class="text-[9px] text-green-600 font-medium">室外走道</span>'
+            : isVert ? `<span class="text-[9px] text-amber-600 font-medium">垂直 (×${e.verticalPenalty ?? 150})</span>` : '';
+
+          return `
+            <div class="flex items-center justify-between p-2 pl-3 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-200 transition-all">
+              <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 text-[11px] text-gray-600 font-medium">
+                  <i class="fa-solid ${iconClass} text-[10px] flex-shrink-0"></i>
+                  <span class="truncate">${otherName}</span>
+                </div>
+                ${badge}
+              </div>
+              <button onclick="removeEdge(${i})" class="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-2 flex-shrink-0">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function updateFloorOptions() {
+        const sel = document.getElementById('floor-filter');
+        const current = sel.value;
+        const floors = [...new Set(nodes.flatMap(n => n.floors))].sort((a, b) => a - b);
+        const opts = '<option value="all">全部樓層</option>' + floors.map(f => `<option value="${f}">${f}F</option>`).join('');
+        sel.innerHTML = opts;
+        sel.value = current;
+      }
+
+      // === Node operations ===
+      function selectNode(id) {
+        selectedNodeId = id;
+        const node = nodes.find(n => n.id === id);
+        if (!node) return;
+
+        const panel = document.getElementById('edit-panel');
+        panel.classList.add('show');
+        document.getElementById('edit-id').value = node.id;
+        document.getElementById('edit-name').value = node.name;
+        document.getElementById('edit-type').value = node.type;
+        document.getElementById('edit-floors').value = node.floors.sort((a, b) => a - b).join(', ');
+        document.getElementById('edit-lat').value = node.coordinates[0];
+        document.getElementById('edit-lng').value = node.coordinates[1];
+        document.getElementById('edit-poi').checked = node.isPOI;
+
+        document.getElementById('ground-level-section').style.display = '';
+        document.getElementById('edit-ground').checked = !!node.isGroundLevel;
+
+        renderBuildingSelectInPanel(node.building || '');
+
+        map.panTo(node.coordinates);
+        renderAll();
+      }
+
+      function closeEditPanel() {
+        selectedNodeId = null;
+        document.getElementById('edit-panel').classList.remove('show');
+        renderAll();
+      }
+
+      function updateField(field, value) {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (node) {
+          node[field] = value;
+          if (field === 'isGroundLevel' && !value) delete node.isGroundLevel;
+          renderAll();
+        }
+      }
+
+      function updateCoord() {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (!node) return;
+        const lat = parseFloat(document.getElementById('edit-lat').value);
+        const lng = parseFloat(document.getElementById('edit-lng').value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          node.coordinates = [lat, lng];
+          renderAll();
+        }
+      }
+
+      function startPickCoord() {
+        if (!selectedNodeId) return;
+        pickingCoord = true;
+        const hint = document.getElementById('hint');
+        hint.textContent = '點擊地圖設定節點座標';
+        hint.style.opacity = '1';
+      }
+
+      function updateFloorsField(val) {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (!node) return;
+        const parsed = [...new Set(val.split(',').map(s => parseInt(s.trim())).filter(f => !isNaN(f)))].sort((a, b) => a - b);
+        if (parsed.length > 0) {
+          const oldFloors = [...node.floors];
+          node.floors = parsed;
+
+          // 1. 移除因樓層變更而失去共同樓層的水平邊
+          edges = edges.filter(e => {
+            if (e.source !== node.id && e.target !== node.id) return true;
+            if (e.isVertical) return true;
+            const other = nodes.find(n => n.id === (e.source === node.id ? e.target : e.source));
+            if (!other) return false;
+            return parsed.some(f => other.floors.includes(f));
+          });
+
+          // 2. 對每個新增的樓層，嘗試自動連接走廊
+          const addedFloors = parsed.filter(f => !oldFloors.includes(f));
+          addedFloors.forEach(f => {
+            // 檢查該樓層是否已有連線
+            const hasEdgeOnFloor = edges.some(e => {
+              if (e.source !== node.id && e.target !== node.id) return false;
+              if (e.isVertical) return false;
+              const other = nodes.find(n => n.id === (e.source === node.id ? e.target : e.source));
+              return other && other.floors.includes(f);
+            });
+            if (!hasEdgeOnFloor) {
+              autoConnectOnFloor(node.id, f);
+            }
+          });
+
+          cleanUpUnusedWaypoints();
+          renderAll();
+        }
+      }
+
+      // 針對特定樓層自動連接最近走廊
+      function autoConnectOnFloor(nodeId, targetFloor) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        function hDist(a, b) {
+          const R = 6371000, toRad = d => d * Math.PI / 180;
+          const dLat = toRad(b[0] - a[0]), dLng = toRad(b[1] - a[1]);
+          const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng/2)**2;
+          return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+        }
+        function projectToSeg(px, py, ax, ay, bx, by) {
+          const dx = bx - ax, dy = by - ay, lenSq = dx*dx + dy*dy;
+          if (lenSq === 0) return { x: ax, y: ay, t: 0 };
+          let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+          t = Math.max(0, Math.min(1, t));
+          return { x: ax + t * dx, y: ay + t * dy, t };
+        }
+
+        let bestDist = Infinity, bestProj = null, bestEdgeIdx = -1, bestSN = null, bestTN = null;
+
+        edges.forEach((e, idx) => {
+          if (e.isVertical) return;
+          const sN = nodes.find(n => n.id === e.source);
+          const tN = nodes.find(n => n.id === e.target);
+          if (!sN || !tN) return;
+          // 只考慮走廊線段（兩端都是 corridor）
+          if (sN.type !== 'corridor' || tN.type !== 'corridor') return;
+          // 只看兩端都在目標樓層的邊
+          if (!sN.floors.includes(targetFloor) || !tN.floors.includes(targetFloor)) return;
+
+          const proj = projectToSeg(
+            node.coordinates[0], node.coordinates[1],
+            sN.coordinates[0], sN.coordinates[1],
+            tN.coordinates[0], tN.coordinates[1]
+          );
+          const d = hDist(node.coordinates, [proj.x, proj.y]);
+          if (d < bestDist) { bestDist = d; bestProj = proj; bestEdgeIdx = idx; bestSN = sN; bestTN = tN; }
+        });
+
+        if (bestEdgeIdx === -1 || bestDist > 50) return;
+
+        const edge = edges[bestEdgeIdx];
+
+        // 繼承被分割走廊邊的共有樓層，以免多樓層走廊在其他樓層斷線
+        const sharedFloors = bestSN.floors.filter(f => bestTN.floors.includes(f));
+
+        // 插入投影節點並連接
+        const vpId = 'vp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+        nodes.push({
+          id: vpId, name: '走廊路徑點', type: 'corridor',
+          floors: sharedFloors.length > 0 ? sharedFloors : [targetFloor],
+          coordinates: [parseFloat(bestProj.x.toFixed(6)), parseFloat(bestProj.y.toFixed(6))],
+          isPOI: false,
+        });
+        edges.splice(bestEdgeIdx, 1);
+        edges.push({ source: edge.source, target: vpId, isVertical: false });
+        edges.push({ source: vpId, target: edge.target, isVertical: false });
+        edges.push({ source: nodeId, target: vpId, isVertical: false });
+      }
+
+      // ===== 批量刪除功能 =====
+      let bdSelectedFloors = new Set();
+      let bdSelectedTypes = new Set();
+
+      function openBatchDelete() {
+        bdSelectedFloors.clear();
+        bdSelectedTypes.clear();
+        document.getElementById('bd-name').value = '';
+
+        // 動態生成樓層按鈕
+        const allFloors = [...new Set(nodes.flatMap(n => n.floors))].sort((a, b) => a - b);
+        document.getElementById('bd-floors').innerHTML = allFloors.map(f =>
+          `<button onclick="toggleBdFloor(${f})" data-floor="${f}" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-blue-400 transition-all">${f}F</button>`
+        ).join('');
+
+        // 動態生成類型按鈕
+        const allTypes = [...new Set(nodes.map(n => n.type))].sort();
+        const typeEmoji = { elevator:'🛗', wc:'🚻', entrance:'🚪', office:'💼', corridor:'🚶', staircase:'🪜', classroom:'🎓' };
+        document.getElementById('bd-types').innerHTML = allTypes.map(t =>
+          `<button onclick="toggleBdType('${t}')" data-type="${t}" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-blue-400 transition-all">${typeEmoji[t]||'📍'} ${typeNameMap[t]||t}</button>`
+        ).join('');
+
+        updateBatchPreview();
+        document.getElementById('batch-delete-overlay').classList.add('active');
+      }
+
+      function closeBatchDelete() {
+        document.getElementById('batch-delete-overlay').classList.remove('active');
+      }
+
+      function toggleBdFloor(f) {
+        if (bdSelectedFloors.has(f)) bdSelectedFloors.delete(f); else bdSelectedFloors.add(f);
+        // 更新按鈕樣式
+        document.querySelectorAll('#bd-floors button').forEach(btn => {
+          const val = parseInt(btn.dataset.floor);
+          if (bdSelectedFloors.has(val)) {
+            btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-50 text-blue-700 transition-all';
+          } else {
+            btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-blue-400 transition-all';
+          }
+        });
+        updateBatchPreview();
+      }
+
+      function toggleBdType(t) {
+        if (bdSelectedTypes.has(t)) bdSelectedTypes.delete(t); else bdSelectedTypes.add(t);
+        document.querySelectorAll('#bd-types button').forEach(btn => {
+          const val = btn.dataset.type;
+          if (bdSelectedTypes.has(val)) {
+            btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border-2 border-blue-500 bg-blue-50 text-blue-700 transition-all';
+          } else {
+            btn.className = 'px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-blue-400 transition-all';
+          }
+        });
+        updateBatchPreview();
+      }
+
+      function getBatchFilteredNodes() {
+        const nameFilter = document.getElementById('bd-name').value.trim().toLowerCase();
+        return nodes.filter(n => {
+          // 樓層條件 (AND): 節點的 floors 必須包含所有選中的樓層之一
+          if (bdSelectedFloors.size > 0) {
+            if (!n.floors.some(f => bdSelectedFloors.has(f))) return false;
+          }
+          // 類型條件 (AND)
+          if (bdSelectedTypes.size > 0) {
+            if (!bdSelectedTypes.has(n.type)) return false;
+          }
+          // 名稱條件 (AND)
+          if (nameFilter && !n.name.toLowerCase().includes(nameFilter)) return false;
+          return true;
+        });
+      }
+
+      function updateBatchPreview() {
+        const matched = getBatchFilteredNodes();
+        document.getElementById('bd-count').textContent = `${matched.length} 個`;
+        const confirmBtn = document.getElementById('bd-confirm-btn');
+        confirmBtn.disabled = matched.length === 0;
+
+        const preview = document.getElementById('bd-preview');
+        if (matched.length === 0) {
+          preview.innerHTML = '<p class="text-gray-400 text-center py-3">尚無符合條件的節點</p>';
+          return;
+        }
+        // 最多顯示 50 筆
+        const display = matched.slice(0, 50);
+        preview.innerHTML = display.map(n =>
+          `<div class="flex items-center justify-between py-1.5 px-2 rounded-lg bg-white border border-gray-100">
+            <div class="flex items-center gap-2 min-w-0">
+              <i class="fa-solid ${typeIcons[n.type] || 'fa-location-dot'} text-gray-400 text-[11px]"></i>
+              <span class="truncate text-gray-700">${n.name}</span>
+            </div>
+            <span class="text-[10px] font-bold text-gray-400 shrink-0 ml-2">${n.floors.sort().join(',')}F</span>
+          </div>`
+        ).join('') + (matched.length > 50 ? `<p class="text-center text-gray-400 py-1">...以及其餘 ${matched.length - 50} 個節點</p>` : '');
+      }
+
+      function executeBatchDelete() {
+        const matched = getBatchFilteredNodes();
+        if (matched.length === 0) return;
+        if (!confirm(`確定要刪除 ${matched.length} 個節點及其所有相關連線嗎？\n此操作無法復原！`)) return;
+
+        const idsToRemove = new Set(matched.map(n => n.id));
+
+        // 移除節點
+        nodes = nodes.filter(n => !idsToRemove.has(n.id));
+        // 移除關聯的邊
+        edges = edges.filter(e => !idsToRemove.has(e.source) && !idsToRemove.has(e.target));
+
+        // 如果被刪除的節點包含正在選取的，清掉面板
+        if (selectedNodeId && idsToRemove.has(selectedNodeId)) {
+          closeEditPanel();
+        }
+
+        closeBatchDelete();
+        cleanUpUnusedWaypoints();
+        renderAll();
+
+        const hint = document.getElementById('hint');
+        hint.textContent = `已刪除 ${idsToRemove.size} 個節點`;
+        hint.style.opacity = '1';
+        setTimeout(() => hint.style.opacity = '0', 3000);
+      }
+
+      function addNode() {
+        const center = map.getCenter();
+        const floorFilter = document.getElementById('floor-filter').value;
+        const floor = floorFilter !== 'all' ? parseInt(floorFilter) : 1;
+        const id = 'node_' + Date.now();
+        const node = {
+          id,
+          name: '新節點',
+          type: 'corridor',
+          floors: [floor],
+          coordinates: [parseFloat(center.lat.toFixed(6)), parseFloat(center.lng.toFixed(6))],
+          isPOI: false,
+        };
+        const detectedBuilding = getNodeBuilding(node.coordinates);
+        if (detectedBuilding) node.building = detectedBuilding;
+        nodes.push(node);
+        autoConnectToNearestCorridor(id);
+        selectNode(id);
+      }
+
+      // === 自動連接最近走廊 ===
+      function autoConnectToNearestCorridor(nodeId) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
+
+        // 已有邊連接的節點不需動作
+        if (edges.some(e => e.source === nodeId || e.target === nodeId)) return;
+
+        // Haversine 距離
+        function hDist(a, b) {
+          const R = 6371000, toRad = d => d * Math.PI / 180;
+          const dLat = toRad(b[0] - a[0]), dLng = toRad(b[1] - a[1]);
+          const s = Math.sin(dLat/2)**2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng/2)**2;
+          return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+        }
+
+        // 點到線段投影
+        function projectToSeg(px, py, ax, ay, bx, by) {
+          const dx = bx - ax, dy = by - ay;
+          const lenSq = dx * dx + dy * dy;
+          if (lenSq === 0) return { x: ax, y: ay, t: 0 };
+          let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+          t = Math.max(0, Math.min(1, t));
+          return { x: ax + t * dx, y: ay + t * dy, t };
+        }
+
+        let bestDist = Infinity, bestProj = null, bestEdgeIdx = -1;
+
+        edges.forEach((e, idx) => {
+          if (e.isVertical) return;
+          const sN = nodes.find(n => n.id === e.source);
+          const tN = nodes.find(n => n.id === e.target);
+          if (!sN || !tN) return;
+          // 只考慮走廊線段（兩端都是 corridor）
+          if (sN.type !== 'corridor' || tN.type !== 'corridor') return;
+          // 只考慮同樓層的邊
+          if (!node.floors.some(f => sN.floors.includes(f) && tN.floors.includes(f))) return;
+
+          const proj = projectToSeg(
+            node.coordinates[0], node.coordinates[1],
+            sN.coordinates[0], sN.coordinates[1],
+            tN.coordinates[0], tN.coordinates[1]
+          );
+          const d = hDist(node.coordinates, [proj.x, proj.y]);
+          if (d < bestDist) {
+            bestDist = d;
+            bestProj = proj;
+            bestEdgeIdx = idx;
+          }
+        });
+
+        // 距離太遠 (>50m) 就不連
+        if (bestEdgeIdx === -1 || bestDist > 50) return;
+
+        const edge = edges[bestEdgeIdx];
+
+        // 在走廊線段上插入投影節點
+        const vpId = 'vp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+        nodes.push({
+          id: vpId,
+          name: '走廊路徑點',
+          type: 'corridor',
+          floors: [...node.floors],
+          coordinates: [parseFloat(bestProj.x.toFixed(6)), parseFloat(bestProj.y.toFixed(6))],
+          isPOI: false,
+        });
+
+        // 拆分原始邊
+        edges.splice(bestEdgeIdx, 1);
+        edges.push({ source: edge.source, target: vpId, isVertical: false });
+        edges.push({ source: vpId, target: edge.target, isVertical: false });
+
+        // 連接新節點到投影點
+        edges.push({ source: nodeId, target: vpId, isVertical: false });
+      }
+
+      function toggleDrawCorridor() {
+        const btn = document.getElementById('draw-corridor-btn');
+        if (drawingCorridor) {
+          // Finish drawing
+          drawingCorridor = false;
+          const drawnFloor = parseInt(document.getElementById('floor-filter').value);
+          corridorPoints = [];
+          if (corridorPreviewLine) { map.removeLayer(corridorPreviewLine); corridorPreviewLine = null; }
+          btn.innerHTML = '<i class="fa-solid fa-pen"></i> 畫走廊';
+          btn.className = 'text-sm bg-amber-600 text-white px-3 py-1 rounded-lg hover:bg-amber-700';
+          document.getElementById('hint').style.opacity = '0';
+
+          // 重新計算同樓層所有非走廊節點的走廊連線
+          let autoConnected = 0;
+          nodes.forEach(n => {
+            if (n.type === 'corridor') return; // 走廊節點自身不處理
+            if (!n.floors.includes(drawnFloor)) return;
+
+            // 刪除該節點在此樓層到走廊的既有水平邊
+            edges = edges.filter(e => {
+              if (e.isVertical) return true;
+              if (e.source !== n.id && e.target !== n.id) return true;
+              const other = nodes.find(nd => nd.id === (e.source === n.id ? e.target : e.source));
+              // 只刪除連到走廊的邊
+              if (other && other.type === 'corridor') return false;
+              return true;
+            });
+
+            // 重新連接到最近的走廊線段
+            autoConnectOnFloor(n.id, drawnFloor);
+            const nowHasEdge = edges.some(e =>
+              (e.source === n.id || e.target === n.id) && !e.isVertical
+            );
+            if (nowHasEdge) autoConnected++;
+          });
+          if (autoConnected > 0) {
+            const hint = document.getElementById('hint');
+            hint.textContent = `已自動重新連接 ${autoConnected} 個節點至最近走廊`;
+            hint.style.opacity = '1';
+            setTimeout(() => hint.style.opacity = '0', 3000);
+          }
+
+          renderAll();
+        } else {
+          // Start drawing
+          const floorFilter = document.getElementById('floor-filter').value;
+          if (floorFilter === 'all') {
+            alert('請先選擇樓層再畫走廊');
+            return;
+          }
+          drawingCorridor = true;
+          corridorPoints = [];
+          closeEditPanel();
+          btn.innerHTML = '<i class="fa-solid fa-check"></i> 完成';
+          btn.className = 'text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700';
+          const hint = document.getElementById('hint');
+          hint.textContent = '點擊地圖描繪走廊路徑，靠近已有節點會自動吸附';
+          hint.style.opacity = '1';
+        }
+      }
+
+      // === 清理並縫合無用走廊路徑點 ===
+      function cleanUpUnusedWaypoints() {
+        let changed = false;
+        // 反覆執行直到不再有節點被清理（因為縫合可能會產生新的可清理節點）
+        let keepChecking = true;
+        while (keepChecking) {
+          keepChecking = false;
+          for (let i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            // 只處理系統自動產生的分叉點
+            if (!n.id.startsWith('vp_')) continue;
+
+            const connectedEdges = edges.filter(e => e.source === n.id || e.target === n.id);
+            
+            // 情況 1: 完全孤立或只有 1 條底線（變成死胡同），直接刪除
+            if (connectedEdges.length <= 1) {
+              edges = edges.filter(e => e.source !== n.id && e.target !== n.id);
+              nodes.splice(i, 1);
+              keepChecking = true;
+              changed = true;
+              break;
+            }
+
+            // 情況 2: 剛好 2 條連線，且都是水平的走廊連線，可以「縫合」前後節點
+            if (connectedEdges.length === 2 && !connectedEdges[0].isVertical && !connectedEdges[1].isVertical) {
+              const e1 = connectedEdges[0];
+              const e2 = connectedEdges[1];
+              const neighborA = nodes.find(nd => nd.id === (e1.source === n.id ? e1.target : e1.source));
+              const neighborB = nodes.find(nd => nd.id === (e2.source === n.id ? e2.target : e2.source));
+              
+              if (neighborA && neighborB && neighborA.type === 'corridor' && neighborB.type === 'corridor') {
+                // 刪除這兩條邊
+                edges = edges.filter(e => e.source !== n.id && e.target !== n.id);
+                // 建立新的邊直接連通 A 和 B (如果還沒連接的話)
+                const alreadyConnected = edges.some(e => 
+                  (e.source === neighborA.id && e.target === neighborB.id) ||
+                  (e.source === neighborB.id && e.target === neighborA.id)
+                );
+                if (!alreadyConnected) {
+                  edges.push({ source: neighborA.id, target: neighborB.id, isVertical: false });
+                }
+                // 刪除此路徑點
+                nodes.splice(i, 1);
+                keepChecking = true;
+                changed = true;
+                break;
+              }
+            }
+          }
+        }
+        return changed;
+      }
+
+      function deleteNode() {
+        const idToDelete = selectedNodeId;
+        if (!idToDelete) return;
+        edges = edges.filter(e => e.source !== idToDelete && e.target !== idToDelete);
+        nodes = nodes.filter(n => n.id !== idToDelete);
+        selectedNodeId = null;
+        document.getElementById('edit-panel').classList.remove('show');
+        cleanUpUnusedWaypoints();
+        renderAll();
+      }
+
+      // === Edge operations ===
+      function startAddEdge() {
+        const outdoorLabel = document.getElementById('outdoor-toggle-label');
+        if (addingEdge) {
+          addingEdge = false;
+          edgeSourceId = null;
+          document.getElementById('hint').style.opacity = '0';
+          document.getElementById('add-edge-btn').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>連接線';
+          outdoorLabel.classList.remove('flex');
+          outdoorLabel.classList.add('hidden');
+          renderAll();
+          return;
+        }
+        addingEdge = true;
+        edgeSourceId = null;
+        document.getElementById('add-edge-btn').textContent = '取消';
+        outdoorLabel.classList.remove('hidden');
+        outdoorLabel.classList.add('flex');
+        const hint = document.getElementById('hint');
+        hint.textContent = '點擊地圖上的節點作為起點';
+        hint.style.opacity = '1';
+      }
+
+      function removeEdge(index) {
+        edges.splice(index, 1);
+        renderAll();
+      }
+
+      // === Building Management ===
+
+      function pointInPolygon(point, polygon) {
+        const [px, py] = point;
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+          const [xi, yi] = polygon[i];
+          const [xj, yj] = polygon[j];
+          if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      }
+
+      function getNodeBuilding(coordinates) {
+        for (const b of buildings) {
+          if (!b.bounds || b.bounds.length < 3) continue;
+          if (pointInPolygon(coordinates, b.bounds)) return b.id;
+        }
+        return null;
+      }
+
+      function autoAssignBuildingToNodes() {
+        nodes.forEach(n => {
+          const detected = getNodeBuilding(n.coordinates);
+          if (detected) n.building = detected;
+        });
+      }
+
+      function renderBuildingsOnMap() {
+        buildingLayers.forEach(l => map.removeLayer(l));
+        buildingLayers = [];
+        buildings.forEach(b => {
+          if (!b.bounds || b.bounds.length < 3) return;
+          const poly = L.polygon(b.bounds, {
+            color: '#3b82f6', weight: 2, fillOpacity: 0.05, opacity: 0.4,
+          }).addTo(map);
+          poly.bindTooltip(b.name, { permanent: false, direction: 'center', className: 'text-xs font-bold' });
+          buildingLayers.push(poly);
+        });
+      }
+
+      function renderBuildingSelectInPanel(currentId) {
+        const sel = document.getElementById('edit-building');
+        sel.innerHTML = '<option value="">— 未分配 —</option>' +
+          buildings.map(b => `<option value="${b.id}" ${b.id === currentId ? 'selected' : ''}>${b.name}</option>`).join('');
+      }
+
+      function updateBuildingField(value) {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (!node) return;
+        if (value) { node.building = value; } else { delete node.building; }
+      }
+
+      function openBuildingManager() {
+        renderBuildingList();
+        document.getElementById('building-manager-overlay').classList.add('active');
+      }
+
+      function closeBuildingManager() {
+        document.getElementById('building-manager-overlay').classList.remove('active');
+      }
+
+      function renderBuildingList() {
+        const list = document.getElementById('bm-list');
+        if (buildings.length === 0) {
+          list.innerHTML = '<p class="text-sm text-gray-400 text-center py-2">尚無建築</p>';
+          return;
+        }
+        list.innerHTML = buildings.map(b => `
+          <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl">
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-bold text-gray-800">${b.name}</div>
+              <div class="text-[10px] font-mono text-gray-400">${b.id}</div>
+              ${b.bounds && b.bounds.length >= 3 ? `<div class="text-[10px] text-blue-500 mt-0.5"><i class="fa-solid fa-draw-polygon mr-0.5"></i>${b.bounds.length} 個頂點</div>` : '<div class="text-[10px] text-amber-500">尚未設定範圍</div>'}
+            </div>
+            <div class="flex gap-1 ml-2 shrink-0">
+              <button onclick="startPolygonEdit('${b.id}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 text-xs" title="編輯多邊形">
+                <i class="fa-solid fa-draw-polygon"></i>
+              </button>
+              <button onclick="deleteBuilding('${b.id}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 text-xs" title="刪除">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function addBuilding() {
+        const name = document.getElementById('bm-new-name').value.trim();
+        const id = document.getElementById('bm-new-id').value.trim();
+        if (!name) { alert('請輸入建築名稱'); return; }
+        if (!id) { alert('請輸入建築 ID'); return; }
+        if (!/^[a-zA-Z0-9_-]+$/.test(id)) { alert('建築 ID 只能包含英數字、底線、連字號'); return; }
+        if (buildings.some(b => b.id === id)) { alert('此 ID 已存在'); return; }
+        const bounds = window._pendingBounds || null;
+        buildings.push({ id, name, ...(bounds ? { bounds } : {}) });
+        window._pendingBounds = null;
+        document.getElementById('bm-new-name').value = '';
+        document.getElementById('bm-new-id').value = '';
+        document.getElementById('bm-bounds-label').textContent = '在地圖上繪製邊界多邊形';
+        autoAssignBuildingToNodes();
+        renderBuildingsOnMap();
+        renderBuildingList();
+      }
+
+      function deleteBuilding(id) {
+        if (!confirm(`確定要刪除建築「${buildings.find(b=>b.id===id)?.name}」嗎？\n節點的建築指定將被清除。`)) return;
+        buildings = buildings.filter(b => b.id !== id);
+        nodes.forEach(n => { if (n.building === id) delete n.building; });
+        renderBuildingsOnMap();
+        renderBuildingList();
+        renderAll();
+      }
+
+      // === Polygon Edit Mode ===
+
+      function clearPolygonEditUI() {
+        if (polygonPreviewLayer) { map.removeLayer(polygonPreviewLayer); polygonPreviewLayer = null; }
+        polygonEditMarkers.forEach(m => map.removeLayer(m));
+        polygonEditMarkers = [];
+      }
+
+      function updatePolyBar() {
+        const bar = document.getElementById('poly-bar');
+        const txt = document.getElementById('poly-bar-text');
+        const n = polygonEditVertices.length;
+        if (n === 0) {
+          txt.textContent = '點擊地圖新增頂點（至少3個）';
+          bar.querySelector('.btn-confirm').style.display = 'none';
+        } else if (n < 3) {
+          txt.textContent = `已新增 ${n} 個頂點，還需 ${3 - n} 個`;
+          bar.querySelector('.btn-confirm').style.display = 'none';
+        } else {
+          txt.textContent = `${n} 個頂點｜拖曳調整｜右鍵刪除｜點擊起點閉合`;
+          bar.querySelector('.btn-confirm').style.display = '';
+        }
+        bar.classList.add('show');
+        document.getElementById('hint').textContent = '建築邊界繪製中…';
+        document.getElementById('hint').style.opacity = '1';
+      }
+
+      function renderPolygonEdit() {
+        clearPolygonEditUI();
+        if (polygonEditVertices.length >= 2) {
+          polygonPreviewLayer = L.polygon(polygonEditVertices, {
+            color: '#3b82f6', weight: 2, fillOpacity: 0.1, dashArray: '6,4'
+          }).addTo(map);
+        }
+        polygonEditVertices.forEach((pt, idx) => {
+          const isFirst = idx === 0;
+          const marker = L.marker(pt, {
+            draggable: true,
+            zIndexOffset: 500,
+            icon: L.divIcon({
+              className: '',
+              html: `<div style="width:${isFirst?14:10}px;height:${isFirst?14:10}px;background:${isFirst?'#f59e0b':'#3b82f6'};border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);transform:translate(-${isFirst?7:5}px,-${isFirst?7:5}px);cursor:grab"></div>`,
+              iconSize: [0, 0]
+            })
+          }).addTo(map);
+
+          marker.on('drag', (ev) => {
+            const ll = ev.target.getLatLng();
+            polygonEditVertices[idx] = [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
+            if (polygonPreviewLayer) polygonPreviewLayer.setLatLngs(polygonEditVertices);
+            else if (polygonEditVertices.length >= 2) {
+              polygonPreviewLayer = L.polygon(polygonEditVertices, { color: '#3b82f6', weight: 2, fillOpacity: 0.1, dashArray: '6,4' }).addTo(map);
+            }
+          });
+
+          marker.on('dragend', () => updatePolyBar());
+
+          marker.on('contextmenu', (ev) => {
+            L.DomEvent.stop(ev);
+            if (polygonEditVertices.length <= 3) { alert('至少需要 3 個頂點'); return; }
+            polygonEditVertices.splice(idx, 1);
+            renderPolygonEdit();
+            updatePolyBar();
+          });
+
+          polygonEditMarkers.push(marker);
+        });
+      }
+
+      function startPolygonEdit(buildingId) {
+        editingBuildingId = buildingId;
+        polygonEditVertices = [];
+        if (buildingId) {
+          const b = buildings.find(b => b.id === buildingId);
+          if (b && b.bounds && b.bounds.length >= 3) {
+            polygonEditVertices = b.bounds.map(p => [...p]);
+          }
+        }
+        window._pendingBounds = null;
+        clearPolygonEditUI();
+        polygonEditActive = true;
+        document.getElementById('building-manager-overlay').classList.remove('active');
+        renderPolygonEdit();
+        updatePolyBar();
+      }
+
+      function confirmPolygonEdit() {
+        if (polygonEditVertices.length < 3) { alert('至少需要 3 個頂點'); return; }
+        const bounds = polygonEditVertices.map(p => [...p]);
+        clearPolygonEditUI();
+        polygonEditActive = false;
+        document.getElementById('poly-bar').classList.remove('show');
+        document.getElementById('hint').style.opacity = '0';
+        if (editingBuildingId) {
+          const b = buildings.find(b => b.id === editingBuildingId);
+          if (b) b.bounds = bounds;
+          editingBuildingId = null;
+          autoAssignBuildingToNodes();
+          renderBuildingsOnMap();
+        } else {
+          window._pendingBounds = bounds;
+          document.getElementById('bm-bounds-label').textContent = `已選：${bounds.length} 個頂點`;
+        }
+        openBuildingManager();
+      }
+
+      function cancelPolygonEdit() {
+        clearPolygonEditUI();
+        polygonEditActive = false;
+        editingBuildingId = null;
+        document.getElementById('poly-bar').classList.remove('show');
+        document.getElementById('hint').style.opacity = '0';
+        openBuildingManager();
+      }
+
+      // === File I/O ===
+      let fileHandle = null;
+
+      async function saveToFile() {
+        const data = JSON.stringify({ buildings, nodes, edges }, null, 2);
+
+        // Try File System Access API first (Chrome/Edge on localhost/HTTPS)
+        if (window.showSaveFilePicker) {
+          try {
+            if (!fileHandle) {
+              fileHandle = await window.showSaveFilePicker({
+                suggestedName: 'map_data.json',
+                types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+              });
+            }
+            const writable = await fileHandle.createWritable();
+            await writable.write(data);
+            await writable.close();
+            const status = document.getElementById('save-status');
+            status.innerHTML = `<i class="fa-solid fa-check mr-1"></i>已儲存 ${new Date().toLocaleTimeString()}`;
+            status.classList.remove('opacity-0');
+            status.classList.add('opacity-100');
+            setTimeout(() => {
+              status.classList.remove('opacity-100');
+              status.classList.add('opacity-0');
+            }, 3000);
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') return;
+            // Fall through to download method
+            fileHandle = null;
+          }
+        }
+
+        // Fallback: download
+        const blob = new Blob([data], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'map_data.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        const status = document.getElementById('save-status');
+        status.innerHTML = `<i class="fa-solid fa-check mr-1"></i>已下載 map_data.json`;
+        status.classList.remove('opacity-0');
+        status.classList.add('opacity-100');
+        setTimeout(() => {
+          status.classList.remove('opacity-100');
+          status.classList.add('opacity-0');
+        }, 3000);
+      }
+
+      // === Keyboard shortcuts ===
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && drawingCorridor) {
+          toggleDrawCorridor();
+        }
+        if (e.key === 'z' && (e.ctrlKey || e.metaKey) && drawingCorridor && corridorPoints.length > 0) {
+          e.preventDefault();
+          const removed = corridorPoints.pop();
+          // Remove the waypoint node if it was created during this drawing session
+          const wasSnapped = nodes.find(n => n.id === removed.id && n.type !== 'corridor');
+          if (!wasSnapped) {
+            // Remove auto-created waypoint and its edge
+            edges = edges.filter(e => e.source !== removed.id && e.target !== removed.id);
+            nodes = nodes.filter(n => n.id !== removed.id);
+          } else {
+            // Only remove the edge to this node
+            if (corridorPoints.length > 0) {
+              const prevId = corridorPoints[corridorPoints.length - 1].id;
+              edges = edges.filter(e => !(
+                (e.source === prevId && e.target === removed.id) ||
+                (e.source === removed.id && e.target === prevId)
+              ));
+            }
+          }
+          if (corridorPreviewLine) map.removeLayer(corridorPreviewLine);
+          if (corridorPoints.length > 1) {
+            corridorPreviewLine = L.polyline(corridorPoints.map(p => p.latlng), {
+              color: '#f59e0b', weight: 4, opacity: 0.8,
+            }).addTo(map);
+          } else {
+            corridorPreviewLine = null;
+          }
+          document.getElementById('hint').textContent =
+            corridorPoints.length > 0
+              ? `走廊繪製中 (${corridorPoints.length} 點) — 繼續點擊地圖，或按「完成」結束`
+              : '點擊地圖描繪走廊路徑，靠近已有節點會自動吸附';
+          renderAll();
+        }
+      });
+
+      // === Init: load map_data.json ===
+      fetch('map_data.json')
+        .then(r => r.json())
+        .then(data => {
+          buildings = data.buildings || [];
+          // Retrofit single floor property to floors array if necessary
+          nodes = (data.nodes || []).map(n => {
+            if (n.floor !== undefined && !n.floors) {
+               n.floors = [n.floor];
+               delete n.floor;
+            }
+            return n;
+          });
+          edges = data.edges || [];
+          renderBuildingsOnMap();
+          renderAll();
+        })
+        .catch(() => renderAll());
+    </script>
+  </body>
+</html>

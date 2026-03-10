@@ -1,0 +1,687 @@
+{
+  "buildings": [
+    {
+      "id": "mgmt",
+      "name": "管理學院",
+      "bounds": [
+        [
+          23.951876,
+          120.927074
+        ],
+        [
+          23.95268,
+          120.927192
+        ],
+        [
+          23.952425,
+          120.928413
+        ],
+        [
+          23.951744,
+          120.928332
+        ]
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "node_1_in",
+      "name": "管院二樓大門",
+      "type": "entrance",
+      "building": "mgmt",
+      "coordinates": [
+        23.952316,
+        120.927182
+      ],
+      "isPOI": true,
+      "isGroundLevel": true,
+      "floors": [
+        2
+      ]
+    },
+    {
+      "id": "node_1_hall",
+      "name": "管院一樓大門",
+      "type": "entrance",
+      "building": "mgmt",
+      "coordinates": [
+        23.951887,
+        120.927721
+      ],
+      "isPOI": true,
+      "isGroundLevel": true,
+      "floors": [
+        1
+      ]
+    },
+    {
+      "id": "node_1_wc",
+      "name": "廁所",
+      "type": "wc",
+      "building": "mgmt",
+      "coordinates": [
+        23.951924,
+        120.92723
+      ],
+      "isPOI": true,
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1_elev",
+      "name": "管院電梯 1~5F",
+      "type": "elevator",
+      "building": "mgmt",
+      "coordinates": [
+        23.951867,
+        120.927792
+      ],
+      "isPOI": false,
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_2_elev",
+      "name": "管院電梯 2~5F",
+      "type": "elevator",
+      "building": "mgmt",
+      "coordinates": [
+        23.952343,
+        120.927229
+      ],
+      "isPOI": false,
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773115986493",
+      "name": "管院2F 中庭小門",
+      "type": "entrance",
+      "building": "mgmt",
+      "coordinates": [
+        23.952286,
+        120.927333
+      ],
+      "isPOI": true,
+      "isGroundLevel": true,
+      "floors": [
+        2
+      ]
+    },
+    {
+      "id": "elev_1773117745988_2_2y",
+      "name": "管院樓梯 2~5F",
+      "type": "staircase",
+      "building": "mgmt",
+      "coordinates": [
+        23.952332,
+        120.927227
+      ],
+      "isPOI": false,
+      "floors": [
+        2
+      ]
+    },
+    {
+      "id": "node_1773117794491",
+      "name": "管院1F中庭小門",
+      "type": "entrance",
+      "building": "mgmt",
+      "coordinates": [
+        23.952265,
+        120.92796
+      ],
+      "isPOI": true,
+      "isGroundLevel": true,
+      "floors": [
+        1
+      ]
+    },
+    {
+      "id": "wp_1773161262442_9xbq",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "building": "mgmt",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952603,
+        120.927338
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "wp_1773161266102_8pdm",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "building": "mgmt",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952009,
+        120.92726
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "wp_1773161269198_svoa",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "building": "mgmt",
+      "floors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.95191,
+        120.928179
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "wp_1773161273921_s0zw",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "building": "mgmt",
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952246,
+        120.928216
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "wp_1773161275141_do9f",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "building": "mgmt",
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952262,
+        120.928
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "wp_1773162231487_ud5d",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "building": "mgmt",
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.951972,
+        120.927578
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "node_1773164371035",
+      "name": "管院樓梯 1~5F",
+      "type": "staircase",
+      "building": "mgmt",
+      "floors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952346,
+        120.928226
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "node_1773170082626",
+      "name": "新節點",
+      "type": "corridor",
+      "floors": [
+        2
+      ],
+      "coordinates": [
+        23.952279,
+        120.927373
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "isGroundLevel": true
+    },
+    {
+      "id": "wp_1773170206754_azka",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2
+      ],
+      "coordinates": [
+        23.952266,
+        120.927477
+      ],
+      "isPOI": false,
+      "isGroundLevel": true
+    },
+    {
+      "id": "wp_1773170208605_jl1t",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2
+      ],
+      "coordinates": [
+        23.952275,
+        120.927573
+      ],
+      "isPOI": false,
+      "isGroundLevel": true
+    },
+    {
+      "id": "wp_1773170210237_6ufm",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2
+      ],
+      "coordinates": [
+        23.952366,
+        120.92764
+      ],
+      "isPOI": false,
+      "isGroundLevel": true
+    },
+    {
+      "id": "vp_1773170213642_0dt",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952301,
+        120.927298
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170213642_1sc",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952009,
+        120.92726
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170213642_53k",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952334,
+        120.927302
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170213642_f87",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952325,
+        120.927301
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170233033_i5q",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952291,
+        120.927297
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "node_1773170318366",
+      "name": "樓梯節點",
+      "type": "staircase",
+      "floors": [
+        1,
+        2
+      ],
+      "coordinates": [
+        23.952362,
+        120.927659
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "isGroundLevel": true
+    },
+    {
+      "id": "wp_1773170424084_dikk",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        1
+      ],
+      "coordinates": [
+        23.952328,
+        120.927903
+      ],
+      "isPOI": false,
+      "isGroundLevel": true
+    },
+    {
+      "id": "wp_1773170447497_zzoz",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        1
+      ],
+      "coordinates": [
+        23.952271,
+        120.927898
+      ],
+      "isPOI": false,
+      "isGroundLevel": true
+    },
+    {
+      "id": "vp_1773170449594_566",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.951955,
+        120.927729
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170449594_4vt",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.951947,
+        120.927801
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170449594_ja3",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952246,
+        120.928216
+      ],
+      "isPOI": false
+    },
+    {
+      "id": "vp_1773170501148_s5w",
+      "name": "走廊路徑點",
+      "type": "corridor",
+      "floors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "coordinates": [
+        23.952262,
+        120.928
+      ],
+      "isPOI": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_in",
+      "target": "vp_1773170213642_0dt",
+      "isVertical": false
+    },
+    {
+      "source": "wp_1773161266102_8pdm",
+      "target": "vp_1773170213642_1sc",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170213642_1sc",
+      "target": "wp_1773162231487_ud5d",
+      "isVertical": false
+    },
+    {
+      "source": "node_1_wc",
+      "target": "vp_1773170213642_1sc",
+      "isVertical": false
+    },
+    {
+      "source": "node_2_elev",
+      "target": "vp_1773170213642_53k",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170213642_f87",
+      "target": "vp_1773170213642_53k",
+      "isVertical": false
+    },
+    {
+      "source": "elev_1773117745988_2_2y",
+      "target": "vp_1773170213642_f87",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170213642_0dt",
+      "target": "vp_1773170213642_f87",
+      "isVertical": false
+    },
+    {
+      "source": "wp_1773161262442_9xbq",
+      "target": "vp_1773170213642_53k",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170213642_0dt",
+      "target": "vp_1773170233033_i5q",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170233033_i5q",
+      "target": "wp_1773161266102_8pdm",
+      "isVertical": false
+    },
+    {
+      "source": "node_1773115986493",
+      "target": "vp_1773170233033_i5q",
+      "isVertical": false
+    },
+    {
+      "source": "node_1773170082626",
+      "target": "node_1773115986493",
+      "isOutdoor": true
+    },
+    {
+      "source": "wp_1773170206754_azka",
+      "target": "node_1773170082626",
+      "isOutdoor": true
+    },
+    {
+      "source": "wp_1773170208605_jl1t",
+      "target": "wp_1773170206754_azka",
+      "isOutdoor": true
+    },
+    {
+      "source": "wp_1773170208605_jl1t",
+      "target": "wp_1773170210237_6ufm",
+      "isOutdoor": true
+    },
+    {
+      "source": "node_1_hall",
+      "target": "vp_1773170449594_566",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170449594_4vt",
+      "target": "wp_1773161269198_svoa",
+      "isVertical": false
+    },
+    {
+      "source": "node_1_elev",
+      "target": "vp_1773170449594_4vt",
+      "isVertical": false
+    },
+    {
+      "source": "wp_1773161269198_svoa",
+      "target": "vp_1773170449594_ja3",
+      "isVertical": false
+    },
+    {
+      "source": "node_1773164371035",
+      "target": "vp_1773170449594_ja3",
+      "isVertical": false
+    },
+    {
+      "source": "wp_1773162231487_ud5d",
+      "target": "vp_1773170449594_566",
+      "isVertical": false
+    },
+    {
+      "source": "vp_1773170449594_566",
+      "target": "vp_1773170449594_4vt",
+      "isVertical": false
+    },
+    {
+      "source": "wp_1773161273921_s0zw",
+      "target": "vp_1773170449594_ja3",
+      "isVertical": false
+    },
+    {
+      "source": "node_1773170318366",
+      "target": "wp_1773170424084_dikk",
+      "isOutdoor": true
+    },
+    {
+      "source": "wp_1773170424084_dikk",
+      "target": "wp_1773170447497_zzoz",
+      "isOutdoor": true
+    },
+    {
+      "source": "vp_1773170501148_s5w",
+      "target": "wp_1773161273921_s0zw",
+      "isVertical": false
+    },
+    {
+      "source": "node_1773117794491",
+      "target": "vp_1773170501148_s5w",
+      "isVertical": false
+    },
+    {
+      "source": "wp_1773161275141_do9f",
+      "target": "vp_1773170501148_s5w",
+      "isVertical": false
+    },
+    {
+      "source": "node_1773117794491",
+      "target": "wp_1773170447497_zzoz",
+      "isOutdoor": true
+    },
+    {
+      "source": "wp_1773170210237_6ufm",
+      "target": "node_1773170318366",
+      "isOutdoor": true
+    }
+  ]
+}

@@ -1,0 +1,1774 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>校園導航系統 (Demo v2.0)</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS (CDN) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <!-- FontAwesome (CDN) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bg: "#F5F3ED", // 暖柔白
+              dark: "#4A4A4A", // 炭灰
+              slate: "#708191", // 莫蘭迪藍
+              sage: "#8FA295", // 莫蘭迪綠
+              yellow: "#E6D0A1", // 莫蘭迪黃
+              border: "#D8D5CF", // 霧灰
+            },
+            boxShadow: {
+              soft: "0 4px 20px rgba(74, 74, 74, 0.08)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Inter", sans-serif;
+        color: #4a4a4a;
+      }
+
+      /* 地圖過濾與樣式 */
+      #map {
+        height: 100vh;
+        width: 100vw;
+        z-index: 10;
+        background-color: #e8e4db;
+      }
+      .leaflet-tile-pane {
+        filter: grayscale(30%) brightness(102%);
+      }
+
+      /* 隱藏預設 Zoom 控件 (Mobile First) */
+      .leaflet-control-zoom {
+        display: none !important;
+      }
+
+      /* Floating UI 共通設定 */
+      .overlay {
+        z-index: 1000;
+        position: absolute;
+        pointer-events: none;
+      }
+      .overlay > * {
+        pointer-events: auto;
+      }
+
+      /* 頂部搜尋列 */
+      #search-bar {
+        top: 1rem;
+        left: 1rem;
+        right: 1rem;
+      }
+
+      /* 右側 FABs */
+      #right-fabs {
+        right: 1rem;
+        top: 6rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      /* 三段式 Bottom Sheet */
+      #bottom-sheet {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 100vh; /* 固定高度，讓 translateY 的百分比基於視窗 */
+        background: #f5f3ed;
+        border-top-left-radius: 1.5rem;
+        border-top-right-radius: 1.5rem;
+        box-shadow: 0 -4px 20px rgba(74, 74, 74, 0.1);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1001;
+        transform: translateY(calc(100% - 24px)); /* 預設 closed */
+        touch-action: none;
+        overflow-y: auto;
+      }
+      #bottom-sheet.dragging {
+        transition: none;
+      }
+      #bottom-sheet.closed {
+        transform: translateY(calc(100% - 24px));
+      }
+      #bottom-sheet.peek {
+        transform: translateY(calc(100% - 220px));
+      }
+      #bottom-sheet.full {
+        transform: translateY(10%);
+      }
+
+      .drag-handle {
+        width: 40px;
+        height: 5px;
+        border-radius: 3px;
+        background: #d8d5cf;
+        margin: 12px auto;
+      }
+      .drag-area {
+        cursor: grab;
+        padding-bottom: 8px; /* 增加可觸控範圍 */
+      }
+      .drag-area:active {
+        cursor: grabbing;
+      }
+
+      /* 路線動畫 - 虛線流動 */
+      .route-flowing {
+        stroke-dasharray: 10;
+        animation: dashFlow 0.5s linear infinite;
+      }
+      @keyframes dashFlow {
+        to {
+          stroke-dashoffset: -20;
+        }
+      }
+
+      /* 起點脈衝動畫 */
+      @keyframes pulse-ring {
+        0% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(2.5); opacity: 0; }
+      }
+      .start-pulse {
+        position: relative;
+      }
+      .start-pulse::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 2px solid #8FA295;
+        animation: pulse-ring 1.5s ease-out infinite;
+      }
+
+      /* 標記自訂樣式 */
+      .custom-marker {
+        background-color: #8fa295;
+        border: 2px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 10px;
+      }
+      .custom-marker.poi {
+        background-color: #708191;
+      }
+      .custom-marker.elevator {
+        background-color: #e6d0a1;
+        color: #4a4a4a;
+      }
+      .custom-marker.ground-other-floor {
+        opacity: 0.65;
+        border-style: dashed;
+      }
+      .custom-marker.start-marker {
+        background-color: #8FA295;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 12px;
+      }
+      .custom-marker.end-marker {
+        background-color: #708191;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 12px;
+      }
+
+      /* 側邊抽屌 */
+      #side-drawer {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 300px;
+        background: #F5F3ED;
+        z-index: 3000;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+        overflow-y: auto;
+      }
+      #side-drawer.open { transform: translateX(0); }
+      #drawer-overlay {
+        position: fixed; inset: 0;
+        background: rgba(74,74,74,0.3);
+        z-index: 2999;
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      #drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+      /* 搜尋下拉列表 */
+      #search-results {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 1rem; right: 1rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 8px 20px rgba(74,74,74,0.1);
+        max-height: 250px;
+        overflow-y: auto;
+        display: none;
+        z-index: 1002;
+      }
+
+      /* 過濾下拉 */
+      #filter-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 1rem;
+        width: 200px;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 8px 20px rgba(74,74,74,0.1);
+        display: none;
+        z-index: 1002;
+        padding: 0.5rem 0;
+      }
+
+      /* Toast 通知 */
+      #toast-container {
+        position: fixed;
+        bottom: 5rem;
+        left: 50%; transform: translateX(-50%);
+        z-index: 5000;
+        pointer-events: none;
+      }
+      .toast-msg {
+        background: rgba(74,74,74,0.9);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 1rem;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
+        white-space: nowrap;
+      }
+      @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+      @keyframes toastOut { from { opacity:1; } to { opacity:0; transform: translateY(-10px); } }
+
+      /* 導航模式 search bar */
+      /* search-nav-mode 由 JS 控制顯示狀態 */
+    </style>
+  </head>
+  <body class="bg-bg text-dark">
+    <!-- Leaflet 地圖容器 -->
+    <div id="map"></div>
+
+    <!-- 側邊抽屌過濾層 -->
+    <div id="drawer-overlay" onclick="toggleDrawer()"></div>
+
+    <!-- 側邊抽屌 -->
+    <div id="side-drawer">
+      <div class="p-6 border-b border-border">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-lg font-bold text-dark">校園導航系統</h2>
+          <button onclick="toggleDrawer()" class="w-8 h-8 rounded-full hover:bg-border/50 flex items-center justify-center text-slate">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <p class="text-xs text-slate">Demo v2.0</p>
+      </div>
+      <div class="p-4">
+        <p class="text-xs text-slate uppercase font-bold mb-3 px-2">收藏地點</p>
+        <div id="drawer-favorites" class="mb-4">
+          <p class="text-sm text-slate/70 px-2 py-3">尚無收藏地點</p>
+        </div>
+        <div class="border-t border-border/50 pt-4">
+          <p class="text-xs text-slate uppercase font-bold mb-3 px-2">設定</p>
+          <button class="w-full text-left flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white transition-colors">
+            <i class="fa-solid fa-universal-access text-sage"></i>
+            <span class="text-sm text-dark">無障礙路線優先</span>
+          </button>
+          <button class="w-full text-left flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white transition-colors">
+            <i class="fa-solid fa-moon text-slate"></i>
+            <span class="text-sm text-dark">深色模式 (開發中)</span>
+          </button>
+          <button class="w-full text-left flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white transition-colors">
+            <i class="fa-solid fa-info-circle text-slate"></i>
+            <span class="text-sm text-dark">關於本系統</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UI: 頂部搜尋框 -->
+    <div id="search-bar" class="overlay">
+      <!-- 模式 A: 一般搜尋 -->
+      <div id="search-normal-mode" class="bg-white rounded-2xl shadow-soft flex items-center px-4 py-3 border border-border relative">
+        <button onclick="toggleDrawer()" class="mr-4 text-slate text-lg hover:text-dark transition-colors">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <input
+          id="search-input"
+          type="text"
+          placeholder="搜尋校園地點..."
+          class="flex-1 bg-transparent outline-none text-dark placeholder-slate/60 text-base"
+          oninput="onSearchInput(this.value)"
+          onfocus="onSearchFocus()"
+        />
+        <button id="search-clear" onclick="clearSearch()" class="mr-2 text-slate text-sm hidden hover:text-dark transition-colors">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+        <button onclick="toggleFilter()" class="text-sage text-lg hover:text-dark transition-colors">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+      <!-- 模式 B: 導航起終點雙欄 -->
+      <div id="search-nav-mode" style="display:none;" class="bg-white rounded-2xl shadow-soft border border-border px-3 py-2.5">
+        <div class="flex items-center gap-2">
+          <button onclick="cancelNavBar()" class="text-slate text-lg hover:text-dark transition-colors px-1">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <div class="flex flex-col items-center gap-0.5 py-1">
+            <div class="w-2.5 h-2.5 rounded-full bg-sage border-2 border-sage"></div>
+            <div class="w-0.5 h-4 border-l-2 border-dashed border-border"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-slate border-2 border-slate"></div>
+          </div>
+          <div class="flex-1 flex flex-col gap-1">
+            <div class="relative">
+              <button onclick="editNavPoint('start')" id="nav-bar-start" class="w-full text-left text-sm font-medium text-sage bg-sage/5 rounded-lg px-3 py-1.5 hover:bg-sage/10 transition-colors truncate">
+                點擊選擇起點...
+              </button>
+              <input id="nav-input-start" type="text" placeholder="搜尋起點..." class="hidden w-full text-sm font-medium text-sage bg-sage/5 rounded-lg px-3 py-1.5 outline-none border border-sage/30 focus:border-sage" oninput="onNavSearchInput(this.value)" onblur="onNavInputBlur()" />
+            </div>
+            <div class="relative">
+              <button onclick="editNavPoint('end')" id="nav-bar-end" class="w-full text-left text-sm font-medium text-slate bg-slate/5 rounded-lg px-3 py-1.5 hover:bg-slate/10 transition-colors truncate">
+                點擊選擇終點...
+              </button>
+              <input id="nav-input-end" type="text" placeholder="搜尋終點..." class="hidden w-full text-sm font-medium text-slate bg-slate/5 rounded-lg px-3 py-1.5 outline-none border border-slate/30 focus:border-slate" oninput="onNavSearchInput(this.value)" onblur="onNavInputBlur()" />
+            </div>
+          </div>
+          <button onclick="swapStartEnd()" class="text-slate text-base hover:text-dark transition-colors px-1" title="交換起終點">
+            <i class="fa-solid fa-arrow-right-arrow-left fa-rotate-90"></i>
+          </button>
+        </div>
+      </div>
+      <!-- 搜尋結果下拉 -->
+      <div id="search-results"></div>
+      <!-- 過濾下拉 -->
+      <div id="filter-dropdown">
+        <button onclick="setFilter('all')" class="filter-opt w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-bg transition-colors text-sm" data-type="all">
+          <i class="fa-solid fa-border-all text-slate"></i> 全部顯示
+        </button>
+        <button onclick="setFilter('entrance')" class="filter-opt w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-bg transition-colors text-sm" data-type="entrance">
+          <i class="fa-solid fa-door-open text-slate"></i> 出入口
+        </button>
+        <button onclick="setFilter('wc')" class="filter-opt w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-bg transition-colors text-sm" data-type="wc">
+          <i class="fa-solid fa-restroom text-sage"></i> 洗手間
+        </button>
+        <button onclick="setFilter('elevator')" class="filter-opt w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-bg transition-colors text-sm" data-type="elevator">
+          <i class="fa-solid fa-elevator text-yellow"></i> 電梯
+        </button>
+        <button onclick="setFilter('office')" class="filter-opt w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-bg transition-colors text-sm" data-type="office">
+          <i class="fa-solid fa-building text-slate"></i> 辦公室
+        </button>
+      </div>
+
+      <!-- 跨樓層膠囊按鈕 (隱藏) -->
+      <button id="floor-transition-btn" onclick="executeFloorTransition()" class="hidden mx-auto mt-3 bg-sage text-white px-5 py-2.5 rounded-full shadow-lg font-bold text-sm tracking-wide flex items-center justify-center gap-2 hover:bg-sage/90 active:scale-95 transition-all w-max pointer-events-auto">
+        <span id="transition-prefix">搭乘</span> <span id="transition-type-name">電梯</span> 至 <span id="transition-target-floor">2</span>F <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div id="toast-container"></div>
+
+    <!-- UI: 右側 FABs -->
+    <div id="right-fabs" class="overlay">
+      <!-- 樓層切換 + 選取器 -->
+      <div style="position: relative;">
+        <button
+          onclick="openFloorPicker()"
+          id="btn-floor"
+          class="w-12 h-12 bg-white rounded-full shadow-soft border border-border flex items-center justify-center text-slate font-bold text-sm"
+        >
+          1F
+        </button>
+        <!-- 樓層選取器彈出面板 -->
+        <div id="floor-picker" class="hidden bg-white rounded-2xl border border-border overflow-hidden"
+          style="position: absolute; right: calc(100% + 0.75rem); top: 0; width: 220px; box-shadow: 0 8px 24px rgba(74,74,74,0.14); z-index: 1002;">
+          <div class="flex" style="height: 220px;">
+            <!-- 建築列表 -->
+            <div id="floor-picker-buildings" class="border-r border-border overflow-y-auto shrink-0" style="width: 88px; background: #F5F3ED;"></div>
+            <!-- 樓層列表 -->
+            <div id="floor-picker-floors" class="flex-1 overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 定位 -->
+      <button
+        onclick="myLocation()"
+        class="w-12 h-12 bg-white rounded-full shadow-soft border border-border flex items-center justify-center text-sage"
+      >
+        <i class="fa-solid fa-location-crosshairs text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div id="toast-container"></div>
+    <!-- UI: Bottom Sheet -->
+    <div id="bottom-sheet" class="peek">
+      <!-- 拖曳把手區域 -->
+      <div class="drag-area" id="drag-area">
+        <div class="drag-handle"></div>
+      </div>
+
+      <!-- ===== 模式 A: 探索模式 (預設) ===== -->
+      <div id="sheet-explore">
+        <div class="px-6 pb-3">
+          <h2 class="text-xl font-bold text-dark">探索校園</h2>
+          <p class="text-sm text-slate mt-1">點擊地標查看詳情，或從下方選擇地點</p>
+        </div>
+        <div class="px-6 pb-4 border-b border-border/50">
+          <div class="flex gap-2 flex-wrap" id="explore-chips">
+            <button onclick="setExploreFilter('all')" data-filter="all" class="explore-chip inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-dark text-white"><i class="fa-solid fa-border-all"></i> 全部</button>
+            <button onclick="setExploreFilter('entrance')" data-filter="entrance" class="explore-chip inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-slate/10 text-slate hover:bg-slate/20"><i class="fa-solid fa-door-open"></i> 出入口</button>
+            <button onclick="setExploreFilter('wc')" data-filter="wc" class="explore-chip inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-slate/10 text-slate hover:bg-sage/20 hover:text-sage"><i class="fa-solid fa-restroom"></i> 洗手間</button>
+            <button onclick="setExploreFilter('elevator')" data-filter="elevator" class="explore-chip inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-slate/10 text-slate hover:bg-yellow/30 hover:text-dark"><i class="fa-solid fa-elevator"></i> 電梯</button>
+            <button onclick="setExploreFilter('office')" data-filter="office" class="explore-chip inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-slate/10 text-slate hover:bg-slate/20"><i class="fa-solid fa-building"></i> 辦公室</button>
+          </div>
+        </div>
+        <div id="explore-list" class="px-4 py-2"></div>
+      </div>
+
+      <!-- ===== 模式 B: 地點詳情模式 ===== -->
+      <div id="sheet-poi" style="display:none;">
+        <div class="px-6 pb-3 flex justify-between items-start">
+          <div class="flex-1 min-w-0">
+            <h2 id="sheet-title" class="text-xl font-bold text-dark truncate">管院一樓大廳</h2>
+            <p id="sheet-subtitle" class="text-sm text-slate mt-1">1F • 主要出入口</p>
+          </div>
+          <div class="flex items-center gap-2 ml-3 shrink-0">
+            <button onclick="planRoute()" class="w-10 h-10 rounded-xl bg-sage text-white flex items-center justify-center shadow-sm active:bg-sage/90 transition-colors" title="規劃路線">
+              <i class="fa-solid fa-diamond-turn-right"></i>
+            </button>
+            <button onclick="setAsStart()" class="w-10 h-10 rounded-xl bg-white border border-border text-slate flex items-center justify-center shadow-sm active:bg-gray-50 transition-colors" title="設為起點">
+              <i class="fa-solid fa-location-dot"></i>
+            </button>
+            <button id="btn-fav" onclick="toggleFavorite()" class="w-10 h-10 rounded-xl bg-yellow/20 text-yellow/40 flex items-center justify-center transition-colors" title="收藏">
+              <i class="fa-solid fa-star"></i>
+            </button>
+          </div>
+        </div>
+        <!-- 擴充資訊 -->
+        <div id="poi-extra" class="px-6 py-3 border-t border-border/30 text-sm">
+          <p id="poi-desc" class="text-slate mb-1"></p>
+          <div class="flex gap-4 text-xs text-slate">
+            <span id="poi-hours"><i class="fa-solid fa-clock mr-1"></i></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 模式 C: 選擇起/終點模式 ===== -->
+      <div id="sheet-pick" style="display:none;">
+        <div class="px-6 pb-3">
+          <h2 id="pick-title" class="text-xl font-bold text-dark">選擇地點</h2>
+          <p id="pick-subtitle" class="text-sm text-slate mt-1">請選擇一個地點</p>
+        </div>
+        <div id="pick-location-btn" class="px-6 pb-3">
+          <button onclick="useMyLocationAsStart()" class="w-full bg-sage/10 text-sage rounded-xl py-3 font-bold flex items-center justify-center gap-2 mb-2 active:bg-sage/20 border border-sage/20">
+            <i class="fa-solid fa-location-crosshairs"></i> 地標定位（管院正門入口）
+          </button>
+        </div>
+        <div class="px-6 pb-2 border-t border-border/50 pt-3">
+          <p class="text-xs text-slate mb-2">或從列表中選取：</p>
+        </div>
+        <div id="pick-list" class="px-4 py-1"></div>
+      </div>
+
+      <!-- ===== 模式 D: 路線摘要模式 ===== -->
+      <div id="sheet-nav" style="display:none;">
+        <div class="px-6 pb-4">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex flex-col items-center gap-1">
+              <div class="w-3 h-3 rounded-full bg-sage border-2 border-sage"></div>
+              <div class="w-0.5 h-6 bg-border"></div>
+              <div class="w-3 h-3 rounded-full bg-slate border-2 border-slate"></div>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm text-sage font-medium" id="nav-start-name">起點</p>
+              <div class="h-4"></div>
+              <p class="text-sm text-slate font-medium" id="nav-end-name">終點</p>
+            </div>
+          </div>
+          <div class="flex gap-4 text-sm text-dark mb-4 px-1">
+            <span><i class="fa-solid fa-person-walking text-sage mr-1"></i> <span id="nav-distance">--</span> 公尺</span>
+            <span><i class="fa-solid fa-clock text-slate mr-1"></i> 約 <span id="nav-time">--</span> 分鐘</span>
+          </div>
+        </div>
+        <div class="px-6 pb-6 flex gap-3">
+          <button onclick="beginNavigation()" class="flex-1 bg-sage text-white rounded-xl py-3 font-bold shadow-md flex items-center justify-center gap-2 active:bg-sage/90">
+            <i class="fa-solid fa-play"></i> 開始導航
+          </button>
+          <button onclick="cancelPlan()" class="px-5 bg-white border border-border text-slate rounded-xl py-3 font-bold shadow-sm flex items-center justify-center gap-2 active:bg-gray-50">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== 模式 D: 導航進行中模式 ===== -->
+      <div id="sheet-nav-active" style="display:none;">
+        <div class="px-6 pb-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-sage/20 text-sage flex items-center justify-center">
+              <i class="fa-solid fa-diamond-turn-right text-lg"></i>
+            </div>
+            <div>
+              <p class="text-base font-bold text-dark">前往 <span id="nav-active-dest">--</span></p>
+              <p class="text-xs text-slate"><span id="nav-active-info">導航中...</span></p>
+            </div>
+          </div>
+          <button onclick="endNavigation()" class="px-4 py-2 bg-white border border-red-300 text-red-500 rounded-xl text-sm font-bold shadow-sm active:bg-red-50">
+            結束
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 邏輯執行 -->
+    <script>
+      // === 1. 載入節點與路網資料 ===
+      const MAP_CENTER = [23.9515, 120.9252]; // 暨大管院附近大致座標
+      const currentFloor = 1;
+
+      let nodes = [];
+      let edges = [];
+
+      // === Haversine 距離計算 & Dijkstra 最短路徑 ===
+      function haversineDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(toRad(lat1)) *
+            Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      // --- 幾何輔助：點到線段的最近投影 ---
+      function pointToSegmentProjection(px, py, ax, ay, bx, by) {
+        const dx = bx - ax, dy = by - ay;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return { x: ax, y: ay, t: 0 };
+        let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t)); // 限制在線段範圍 [0,1]
+        return { x: ax + t * dx, y: ay + t * dy, t };
+      }
+
+      // --- 將 POI 投影到最近的走廊線段 ---
+      function snapToCorridorNetwork(nodeId, tempNodes, tempEdges) {
+        const node = tempNodes.find(n => n.id === nodeId);
+        if (!node) return nodeId;
+
+        // 如果節點已在走廊網路中（有 edge 連接），不需要投影
+        const hasEdge = tempEdges.some(e => e.source === nodeId || e.target === nodeId);
+        if (hasEdge) return nodeId;
+
+        // 取得同樓層的走廊 edges
+        let bestDist = Infinity, bestProj = null, bestEdgeIdx = -1;
+        tempEdges.forEach((e, idx) => {
+          const sNode = tempNodes.find(n => n.id === e.source);
+          const tNode = tempNodes.find(n => n.id === e.target);
+          if (!sNode || !tNode) return;
+          // 只考慮同樓層、非垂直的走廊邊
+          if (e.isVertical) return;
+          if (sNode.floor !== node.floor && tNode.floor !== node.floor) return;
+
+          const proj = pointToSegmentProjection(
+            node.coordinates[0], node.coordinates[1],
+            sNode.coordinates[0], sNode.coordinates[1],
+            tNode.coordinates[0], tNode.coordinates[1]
+          );
+          const d = haversineDistance(node.coordinates[0], node.coordinates[1], proj.x, proj.y);
+          if (d < bestDist) {
+            bestDist = d;
+            bestProj = proj;
+            bestEdgeIdx = idx;
+          }
+        });
+
+        if (bestEdgeIdx === -1) return nodeId; // 無走廊可投影
+
+        const edge = tempEdges[bestEdgeIdx];
+        const sNode = tempNodes.find(n => n.id === edge.source);
+        const tNode = tempNodes.find(n => n.id === edge.target);
+
+        // 如果投影點非常接近既有端點（<1m），直接連接到端點
+        const distToSource = haversineDistance(bestProj.x, bestProj.y, sNode.coordinates[0], sNode.coordinates[1]);
+        const distToTarget = haversineDistance(bestProj.x, bestProj.y, tNode.coordinates[0], tNode.coordinates[1]);
+        if (distToSource < 1) {
+          tempEdges.push({ source: nodeId, target: edge.source, isVertical: false });
+          return nodeId;
+        }
+        if (distToTarget < 1) {
+          tempEdges.push({ source: nodeId, target: edge.target, isVertical: false });
+          return nodeId;
+        }
+
+        // 建立虛擬投影節點
+        const vpId = '__vp_' + nodeId;
+        tempNodes.push({
+          id: vpId,
+          name: '投影點',
+          type: 'corridor',
+          floor: node.floor,
+          coordinates: [parseFloat(bestProj.x.toFixed(6)), parseFloat(bestProj.y.toFixed(6))],
+          isPOI: false,
+        });
+
+        // 移除原始走廊邊，用兩條新邊取代（虛擬節點把邊一分為二）
+        tempEdges.splice(bestEdgeIdx, 1);
+        tempEdges.push({ source: edge.source, target: vpId, isVertical: false });
+        tempEdges.push({ source: vpId, target: edge.target, isVertical: false });
+
+        // 連接 POI → 虛擬投影節點
+        tempEdges.push({ source: nodeId, target: vpId, isVertical: false });
+
+        return nodeId;
+      }
+
+      function findShortestPath(startId, endId) {
+        // 深拷貝 nodes 和 edges，避免汙染原始資料
+        const tempNodes = nodes.map(n => ({ ...n, coordinates: [...n.coordinates] }));
+        const tempEdges = edges.map(e => ({ ...e }));
+
+        // 將非走廊網路的 POI 節點投影到最近的走廊線段
+        snapToCorridorNetwork(startId, tempNodes, tempEdges);
+        snapToCorridorNetwork(endId, tempNodes, tempEdges);
+
+        // 建立鄰接表
+        const adj = {};
+        tempNodes.forEach((n) => (adj[n.id] = []));
+        tempEdges.forEach((e) => {
+          const sNode = tempNodes.find((n) => n.id === e.source);
+          const tNode = tempNodes.find((n) => n.id === e.target);
+          if (!sNode || !tNode) return;
+          const d =
+            haversineDistance(
+              sNode.coordinates[0],
+              sNode.coordinates[1],
+              tNode.coordinates[0],
+              tNode.coordinates[1],
+            ) + (e.verticalPenalty || 0);
+          adj[e.source].push({ to: e.target, dist: d });
+          adj[e.target].push({ to: e.source, dist: d });
+        });
+
+        // Dijkstra
+        const dist = {};
+        const prev = {};
+        const visited = new Set();
+        tempNodes.forEach((n) => (dist[n.id] = Infinity));
+        dist[startId] = 0;
+
+        while (true) {
+          let u = null;
+          let minD = Infinity;
+          for (const id in dist) {
+            if (!visited.has(id) && dist[id] < minD) {
+              minD = dist[id];
+              u = id;
+            }
+          }
+          if (u === null || u === endId) break;
+          visited.add(u);
+          for (const edge of adj[u]) {
+            const alt = dist[u] + edge.dist;
+            if (alt < dist[edge.to]) {
+              dist[edge.to] = alt;
+              prev[edge.to] = u;
+            }
+          }
+        }
+
+        const path = [];
+        let cur = endId;
+        while (cur) {
+          path.unshift(tempNodes.find((n) => n.id === cur));
+          cur = prev[cur];
+        }
+        return { path, distance: dist[endId] };
+      }
+
+      // === 2. 初始化 Leaflet 地圖 ===
+      const map = L.map("map", { zoomControl: false }).setView(MAP_CENTER, 19);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 22,
+        maxNativeZoom: 19,
+        attribution: "&copy; OpenStreetMap",
+      }).addTo(map);
+
+      // === 3. 狀態與全域變數 ===
+      let activeFloor = 1;
+      let markersLayer = L.layerGroup().addTo(map);
+      let routeLayer = null;
+      let selectedNode = nodes[1]; // 預設大廳
+      let startNode = null;
+      let destinationNode = null;
+      let isNavigating = false; // 導航狀態旗標
+      let navMode = 'explore'; // explore | poi | nav-summary | nav-active
+      let activeFilter = 'all'; // all | entrance | wc | elevator | office
+      let editingNavField = null; // 'start' | 'end' | null （正在編輯哪個欄位）
+
+      // === Toast 通知系統 ===
+      function showToast(msg) {
+        const c = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'toast-msg';
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => t.remove(), 2200);
+      }
+
+      // === 搜尋列模式切換 ===
+      function updateSearchBarMode() {
+        const normal = document.getElementById('search-normal-mode');
+        const nav = document.getElementById('search-nav-mode');
+        if (['nav-summary','nav-active','pick-start','pick-end'].includes(navMode)) {
+          normal.style.display = 'none';
+          nav.style.display = 'block';
+          document.getElementById('nav-bar-start').textContent = startNode ? startNode.name : '點擊選擇起點...';
+          document.getElementById('nav-bar-end').textContent = destinationNode ? destinationNode.name : '點擊選擇終點...';
+        } else {
+          normal.style.display = '';
+          nav.style.display = 'none';
+        }
+      }
+
+      // === 收藏功能 (localStorage) ===
+      function getFavorites() {
+        try { return JSON.parse(localStorage.getItem('ncnu_favs') || '[]'); } catch { return []; }
+      }
+      function saveFavorites(favs) {
+        localStorage.setItem('ncnu_favs', JSON.stringify(favs));
+      }
+      function toggleFavorite() {
+        if (!selectedNode) return;
+        let favs = getFavorites();
+        const idx = favs.indexOf(selectedNode.id);
+        if (idx >= 0) {
+          favs.splice(idx, 1);
+          showToast('已取消收藏');
+        } else {
+          favs.push(selectedNode.id);
+          showToast('⭐ 已加入收藏');
+        }
+        saveFavorites(favs);
+        updateFavButton();
+        renderDrawerFavorites();
+      }
+      function updateFavButton() {
+        const btn = document.getElementById('btn-fav');
+        const favs = getFavorites();
+        const isFav = selectedNode && favs.includes(selectedNode.id);
+        btn.classList.toggle('text-yellow', isFav);
+        btn.classList.toggle('text-yellow/40', !isFav);
+      }
+      function renderDrawerFavorites() {
+        const container = document.getElementById('drawer-favorites');
+        const favs = getFavorites();
+        const favNodes = nodes.filter(n => favs.includes(n.id));
+        if (favNodes.length === 0) {
+          container.innerHTML = '<p class="text-sm text-slate/70 px-2 py-3">尚無收藏地點</p>';
+          return;
+        }
+        container.innerHTML = favNodes.map(n => `
+          <button onclick="toggleDrawer();selectNode(nodes.find(x=>x.id==='${n.id}'))" class="w-full text-left flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-white transition-colors">
+            <i class="fa-solid fa-star text-yellow text-xs"></i>
+            <div>
+              <p class="text-dark font-medium text-sm">${n.name}</p>
+              <p class="text-slate text-xs">${n.floor}F</p>
+            </div>
+          </button>
+        `).join('');
+      }
+
+      // === 最近搜尋 (localStorage) ===
+      function getRecentSearches() {
+        try { return JSON.parse(localStorage.getItem('ncnu_recent') || '[]'); } catch { return []; }
+      }
+      function addRecentSearch(nodeId) {
+        let recent = getRecentSearches().filter(id => id !== nodeId);
+        recent.unshift(nodeId);
+        if (recent.length > 5) recent = recent.slice(0, 5);
+        localStorage.setItem('ncnu_recent', JSON.stringify(recent));
+      }
+
+      // === POI 模擬描述資料 ===
+      const poiDescriptions = {
+        'node_1_in': { desc: '管理學院正門入口，設有門禁系統。', hours: '06:00 - 22:00' },
+        'node_1_hall': { desc: '一樓中央大廳，連接各區域的主要通道。', hours: '全天開放' },
+        'node_1_wc': { desc: '一樓男女洗手間，位於大廳旁。', hours: '全天開放' },
+        'node_1_elev': { desc: '可搭乘至 1F - 5F 各樓層。', hours: '全天開放' },
+        'node_2_office': { desc: '企管系、資管系辦公室，辦理選課與行政事務。', hours: '08:30 - 17:00' },
+        'node_2_wc': { desc: '二樓男女洗手間。', hours: '全天開放' },
+        'node_2_elev': { desc: '可搭乘至 1F - 5F 各樓層。', hours: '全天開放' },
+      };
+
+      // === 搜尋列功能 ===
+      function toggleDrawer() {
+        document.getElementById('side-drawer').classList.toggle('open');
+        document.getElementById('drawer-overlay').classList.toggle('open');
+      }
+
+      function onSearchInput(val) {
+        const box = document.getElementById('search-results');
+        const clearBtn = document.getElementById('search-clear');
+        if (!val.trim()) {
+          box.style.display = 'none';
+          clearBtn.classList.add('hidden');
+          return;
+        }
+        clearBtn.classList.remove('hidden');
+        const q = val.toLowerCase();
+        const results = nodes.filter(n => n.isPOI && n.name.toLowerCase().includes(q));
+        if (results.length === 0) {
+          box.innerHTML = '<p class="px-4 py-3 text-sm text-slate">找不到相關地點</p>';
+        } else {
+          box.innerHTML = results.map(n => `
+            <button onclick="searchSelect('${n.id}')" class="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-bg transition-colors border-b border-border/30 last:border-0">
+              <div class="w-8 h-8 rounded-full ${n.type==='elevator'?'bg-yellow/20 text-yellow':'bg-sage/10 text-sage'} flex items-center justify-center text-xs">
+                <i class="fa-solid ${n.type==='elevator'?'fa-elevator':n.type==='wc'?'fa-restroom':n.type==='entrance'?'fa-door-open':'fa-building'}"></i>
+              </div>
+              <div>
+                <p class="text-dark font-medium text-sm">${n.name}</p>
+                <p class="text-slate text-xs">${n.floor}F · ${typeNameMap[n.type]||n.type}</p>
+              </div>
+            </button>
+          `).join('');
+        }
+        box.style.display = 'block';
+      }
+
+      function onSearchFocus() {
+        const val = document.getElementById('search-input').value;
+        if (val.trim()) { onSearchInput(val); return; }
+        // 無輸入 → 顯示最近搜尋
+        const recent = getRecentSearches();
+        if (recent.length === 0) return;
+        const box = document.getElementById('search-results');
+        const recentNodes = recent.map(id => nodes.find(n => n.id === id)).filter(Boolean);
+        box.innerHTML = '<p class="px-4 pt-3 pb-1 text-xs text-slate font-bold">最近搜尋</p>' +
+          recentNodes.map(n => `
+            <button onclick="searchSelect('${n.id}')" class="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-bg transition-colors border-b border-border/30 last:border-0">
+              <div class="w-8 h-8 rounded-full bg-slate/10 text-slate flex items-center justify-center text-xs">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+              </div>
+              <div>
+                <p class="text-dark font-medium text-sm">${n.name}</p>
+                <p class="text-slate text-xs">${n.floor}F · ${typeNameMap[n.type]||n.type}</p>
+              </div>
+            </button>
+          `).join('');
+        box.style.display = 'block';
+      }
+
+      function searchSelect(nodeId) {
+        const node = nodes.find(n => n.id === nodeId);
+        document.getElementById('search-results').style.display = 'none';
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-clear').classList.add('hidden');
+        addRecentSearch(nodeId);
+        selectNode(node);
+      }
+
+      function clearSearch() {
+        document.getElementById('search-input').value = '';
+        document.getElementById('search-results').style.display = 'none';
+        document.getElementById('search-clear').classList.add('hidden');
+      }
+
+      function toggleFilter() {
+        const dd = document.getElementById('filter-dropdown');
+        dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+        document.getElementById('search-results').style.display = 'none';
+      }
+
+      // 探索模式底部分類chip過濾
+      function setExploreFilter(type) {
+        activeFilter = type;
+        // 更新 chip 選中樣式
+        document.querySelectorAll('.explore-chip').forEach(btn => {
+          const isActive = btn.dataset.filter === type;
+          btn.classList.toggle('bg-dark', isActive);
+          btn.classList.toggle('text-white', isActive);
+          btn.classList.toggle('bg-slate/10', !isActive);
+          btn.classList.toggle('text-slate', !isActive);
+        });
+        renderMap();
+        showExploreMode();
+      }
+
+      function setFilter(type) {
+        activeFilter = type;
+        document.getElementById('filter-dropdown').style.display = 'none';
+        // 視覺反饋：高亮選中項
+        document.querySelectorAll('.filter-opt').forEach(btn => {
+          btn.classList.toggle('text-sage', btn.dataset.type === type);
+          btn.classList.toggle('font-bold', btn.dataset.type === type);
+        });
+        renderMap();
+        showExploreMode();
+      }
+
+      // 點擊其他地方關閉下拉選單
+      document.addEventListener('click', function(e) {
+        const bar = document.getElementById('search-bar');
+        if (!bar.contains(e.target)) {
+          document.getElementById('search-results').style.display = 'none';
+          document.getElementById('filter-dropdown').style.display = 'none';
+        }
+        const floorBtn = document.getElementById('btn-floor');
+        const floorPicker = document.getElementById('floor-picker');
+        if (floorPicker && !floorPicker.classList.contains('hidden') &&
+            !floorPicker.contains(e.target) && e.target !== floorBtn) {
+          floorPicker.classList.add('hidden');
+        }
+      });
+
+      // === 4. UI 互動與拖曳手勢 ===
+      const sheet = document.getElementById("bottom-sheet");
+      const dragArea = document.getElementById("drag-area");
+
+      let _startY = 0;
+      let _isDragging = false;
+      let _initialY = 0; // 按下時面板的 transform Y 值
+
+      function _getTransformY(el) {
+        const m = window.getComputedStyle(el).transform.match(/matrix\((.+)\)$/);
+        return m ? parseFloat(m[1].split(", ")[5]) : 0;
+      }
+
+      function _onDragStart(e) {
+        e.preventDefault();
+        _isDragging = true;
+        _startY = e.touches ? e.touches[0].clientY : e.clientY;
+        _initialY = _getTransformY(sheet);
+        sheet.classList.add("dragging");
+      }
+
+      function _onDragMove(e) {
+        if (!_isDragging) return;
+        e.preventDefault();
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const wh = window.innerHeight;
+        let newY = _initialY + (clientY - _startY);
+        newY = Math.max(wh * 0.1, Math.min(wh - 24, newY));
+        sheet.style.transform = `translateY(${newY}px)`;
+      }
+
+      function _onDragEnd(e) {
+        if (!_isDragging) return;
+        _isDragging = false;
+        sheet.classList.remove("dragging");
+
+        // 讀取放手瞬間的位置
+        const releasedY = _getTransformY(sheet);
+        // 清除 inline style，讓 CSS class + transition 接管
+        sheet.style.transform = "";
+
+        // 如果幾乎沒移動（點擊，非拖曳），不切換任何狀態
+        if (Math.abs(releasedY - _initialY) < 8) return;
+
+        // 計算三個吸附點距離，吸附到最近的那個
+        const wh = window.innerHeight;
+        const snaps = { full: wh * 0.1, peek: wh - 220, closed: wh - 24 };
+        let nearest = "peek", minD = Infinity;
+        for (const [s, y] of Object.entries(snaps)) {
+          const d = Math.abs(releasedY - y);
+          if (d < minD) { minD = d; nearest = s; }
+        }
+        sheet.className = nearest;
+      }
+
+      dragArea.addEventListener("mousedown", _onDragStart);
+      document.addEventListener("mousemove", _onDragMove, { passive: false });
+      document.addEventListener("mouseup", _onDragEnd);
+      dragArea.addEventListener("touchstart", _onDragStart, { passive: false });
+      document.addEventListener("touchmove", _onDragMove, { passive: false });
+      document.addEventListener("touchend", _onDragEnd);
+
+      // 程式內部 API (Button 事件用)
+      function toggleSheet() {
+        if (sheet.classList.contains("peek")) {
+          sheet.className = "full";
+        } else {
+          sheet.className = "peek";
+        }
+      }
+
+      // === 建築設定（未來可依節點 building 屬性動態產生）===
+      let buildings = [];
+      let selectedBuilding = null;
+
+      function openFloorPicker() {
+        const picker = document.getElementById('floor-picker');
+        const willOpen = picker.classList.contains('hidden');
+        picker.classList.toggle('hidden', !willOpen);
+        if (willOpen) renderFloorPicker();
+      }
+
+      function renderFloorPicker() {
+        const buildingsEl = document.getElementById('floor-picker-buildings');
+        if (buildings.length === 0) {
+          // Fallback：無建築資料時隱藏建築欄，直接顯示所有樓層
+          buildingsEl.style.display = 'none';
+          const allFloors = [...new Set(nodes.map(n => n.floor))].sort((a, b) => a - b);
+          document.getElementById('floor-picker-floors').innerHTML = allFloors.map(f => `
+            <button onclick="setActiveFloor(${f})"
+              class="w-full text-center py-3 text-sm font-bold transition-colors ${f === activeFloor ? 'text-sage bg-sage/10' : 'text-dark hover:bg-bg'}">
+              ${f}F
+            </button>
+          `).join('');
+          return;
+        }
+        buildingsEl.style.display = '';
+        // 建築列（含室外虛擬項目）
+        const outdoorActive = selectedBuilding === '__outdoor__';
+        const outdoorBtn = `
+          <button onclick="selectBuilding('__outdoor__')"
+            class="w-full text-left px-3 py-3 text-xs transition-colors ${outdoorActive ? 'bg-white text-dark font-bold' : 'text-slate hover:bg-white/60'}">
+            🌳 室外
+          </button>`;
+        buildingsEl.innerHTML = outdoorBtn + buildings.map(b => `
+          <button onclick="selectBuilding('${b.id}')"
+            class="w-full text-left px-3 py-3 text-xs transition-colors ${selectedBuilding === b.id ? 'bg-white text-dark font-bold' : 'text-slate hover:bg-white/60'}">
+            ${b.name}
+          </button>
+        `).join('');
+
+        // 樓層列（室外模式不需選樓層）
+        const floorsEl = document.getElementById('floor-picker-floors');
+        if (selectedBuilding === '__outdoor__') {
+          floorsEl.innerHTML = '<p class="text-xs text-center text-slate py-4 px-2">室外節點<br>無需選樓層</p>';
+        } else {
+          const floors = getFloorsForBuilding(selectedBuilding);
+          floorsEl.innerHTML = floors.length > 0
+            ? floors.map(f => `
+              <button onclick="setActiveFloor(${f})"
+                class="w-full text-center py-3 text-sm font-bold transition-colors ${f === activeFloor ? 'text-sage bg-sage/10' : 'text-dark hover:bg-bg'}">
+                ${f}F
+              </button>`).join('')
+            : '<p class="text-xs text-center text-slate py-4">無樓層資料</p>';
+        }
+      }
+
+      function selectBuilding(id) {
+        selectedBuilding = id;
+        if (id === '__outdoor__') {
+          document.getElementById('btn-floor').innerText = '室外';
+          document.getElementById('floor-picker').classList.add('hidden');
+          renderMap();
+          if (routeLayer && destinationNode) drawRoute(startNode, destinationNode);
+          return;
+        }
+        renderFloorPicker();
+      }
+
+      function getFloorsForBuilding(buildingId) {
+        let src;
+        if (buildingId === '__outdoor__') {
+          src = nodes.filter(n => n.isGroundLevel);
+        } else if (buildingId) {
+          src = nodes.filter(n => n.building === buildingId);
+        } else {
+          src = nodes;
+        }
+        return [...new Set(src.map(n => n.floor))].sort((a, b) => a - b);
+      }
+
+      function setActiveFloor(f) {
+        activeFloor = f;
+        document.getElementById('btn-floor').innerText = f + 'F';
+        document.getElementById('floor-picker').classList.add('hidden');
+        renderMap();
+        if (routeLayer && destinationNode) {
+          drawRoute(startNode, destinationNode);
+        }
+      }
+
+      function myLocation() {
+        startNode = nodes.find((n) => n.id === "node_1_in");
+        map.flyTo(startNode.coordinates, 19);
+        showToast('📍 已定位：管院正門入口');
+        renderMap();
+      }
+
+      // --- 模式切換系統 ---
+      const typeNameMap = { elevator:'電梯', wc:'洗手間', entrance:'出入口', office:'辦公室', corridor:'走廊', staircase:'樓梯', outdoor_corridor:'室外走道' };
+      const allSheetModes = ['sheet-explore','sheet-poi','sheet-pick','sheet-nav','sheet-nav-active'];
+
+      function switchSheetMode(mode) {
+        allSheetModes.forEach(id => document.getElementById(id).style.display = 'none');
+        document.getElementById(mode).style.display = '';
+      }
+
+      function showExploreMode() {
+        navMode = 'explore';
+        switchSheetMode('sheet-explore');
+        const list = document.getElementById('explore-list');
+        // 取得所有樓層的 POI（依 activeFilter 過濾）
+        const allPois = nodes.filter(n => n.isPOI && (activeFilter === 'all' || n.type === activeFilter));
+        // 依樓層分組
+        const floors = [...new Set(allPois.map(n => n.floor))].sort();
+        let html = '';
+        floors.forEach(f => {
+          const floorPois = allPois.filter(n => n.floor === f);
+          html += `<p class="text-xs text-slate font-bold uppercase px-2 pt-3 pb-1 ${f === activeFloor ? 'text-sage':''}">${f}F ${f === activeFloor ? '（目前樓層）':''}</p>`;
+          floorPois.forEach(n => {
+            html += `
+              <button onclick="selectNode(nodes.find(x=>x.id==='${n.id}'))" class="w-full text-left flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white transition-colors">
+                <div class="w-9 h-9 rounded-full ${n.type==='elevator'?'bg-yellow/20 text-yellow':'bg-sage/10 text-sage'} flex items-center justify-center text-sm">
+                  <i class="fa-solid ${n.type==='elevator'?'fa-elevator':n.type==='wc'?'fa-restroom':n.type==='entrance'?'fa-door-open':'fa-building'}"></i>
+                </div>
+                <div>
+                  <p class="text-dark font-medium text-sm">${n.name}</p>
+                  <p class="text-slate text-xs">${n.floor}F · ${typeNameMap[n.type]||n.type}</p>
+                </div>
+              </button>`;
+          });
+        });
+        list.innerHTML = html;
+        sheet.className = 'peek';
+        updateSearchBarMode();
+      }
+
+      function selectNode(node) {
+        if (isNavigating) return;
+        selectedNode = node;
+        // 跨樓層自動切換
+        if (node.floor !== activeFloor) {
+          activeFloor = node.floor;
+          document.getElementById('btn-floor').innerText = activeFloor + 'F';
+          renderMap();
+        }
+        // 如果正在選取起點（pick-start模式）
+        if (navMode === 'pick-start') {
+          startNode = node;
+          if (startNode.id === destinationNode?.id) {
+            showToast('起點與終點相同，請重新選擇');
+            return;
+          }
+          renderMap();
+          showRouteSummary();
+          return;
+        }
+        // 如果正在選取終點（pick-end模式）
+        if (navMode === 'pick-end') {
+          destinationNode = node;
+          if (startNode?.id === destinationNode.id) {
+            showToast('起點與終點相同，請重新選擇');
+            return;
+          }
+          renderMap();
+          showRouteSummary();
+          return;
+        }
+        // 正常 POI 模式
+        navMode = 'poi';
+        switchSheetMode('sheet-poi');
+        document.getElementById('sheet-title').innerText = node.name;
+        const typeName = typeNameMap[node.type] || node.type;
+        document.getElementById('sheet-subtitle').innerText = `${node.floor}F • ${typeName}`;
+        const info = poiDescriptions[node.id];
+        document.getElementById('poi-desc').textContent = info ? info.desc : `${typeName}，位於管理學院 ${node.floor}F。`;
+        document.getElementById('poi-hours').innerHTML = `<i class="fa-solid fa-clock mr-1"></i>${info ? info.hours : '依校方公告'}`;
+        updateFavButton();
+        updateSearchBarMode();
+        sheet.className = 'peek';
+        map.flyTo(node.coordinates, 20);
+      }
+
+      // 點擊地圖空白處
+      map.on('click', function() {
+        if (isNavigating) return;
+        if (['nav-summary','pick-start','pick-end'].includes(navMode)) return;
+        showExploreMode();
+      });
+
+      function setAsStart() {
+        startNode = selectedNode;
+        showToast(`✓ 已設定起點：${startNode.name}`);
+        destinationNode = null;
+        navMode = 'pick-end';
+        // 顯示「選擇終點」面板
+        document.getElementById('pick-title').textContent = '選擇終點';
+        document.getElementById('pick-subtitle').textContent = `起點已設為「${startNode.name}」，請選擇您的目的地`;
+        document.getElementById('pick-location-btn').style.display = 'none';
+        switchSheetMode('sheet-pick');
+        updateSearchBarMode();
+        renderMap();
+        const list = document.getElementById('pick-list');
+        const pois = nodes.filter(n => n.isPOI && n.id !== startNode.id && (activeFilter === 'all' || n.type === activeFilter));
+        const floors = [...new Set(pois.map(n => n.floor))].sort();
+        let html = '';
+        floors.forEach(f => {
+          const floorPois = pois.filter(n => n.floor === f);
+          html += `<p class="text-xs text-slate font-bold uppercase px-2 pt-3 pb-1 ${f === activeFloor ? 'text-sage':''}">${f}F ${f === activeFloor ? '（目前樓層）':''}</p>`;
+          floorPois.forEach(n => {
+            html += `
+              <button onclick="selectNode(nodes.find(x=>x.id==='${n.id}'))" class="w-full text-left flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white transition-colors">
+                <div class="w-9 h-9 rounded-full ${n.type==='elevator'?'bg-yellow/20 text-yellow':'bg-sage/10 text-sage'} flex items-center justify-center text-sm">
+                  <i class="fa-solid ${n.type==='elevator'?'fa-elevator':n.type==='wc'?'fa-restroom':n.type==='entrance'?'fa-door-open':'fa-building'}"></i>
+                </div>
+                <div>
+                  <p class="text-dark font-medium text-sm">${n.name}</p>
+                  <p class="text-slate text-xs">${n.floor}F · ${typeNameMap[n.type]||n.type}</p>
+                </div>
+              </button>`;
+          });
+        });
+        list.innerHTML = html;
+        sheet.className = 'peek';
+      }
+
+      // --- 導航兩階段流程 ---
+
+      // 階段 1: 點「規劃路線」→ 檢查是否有起點
+      function planRoute() {
+        destinationNode = selectedNode;
+
+        if (!startNode) {
+          navMode = 'pick-start';
+          document.getElementById('pick-title').textContent = '選擇起點';
+          document.getElementById('pick-subtitle').textContent = '您尚未設定起點，請先選擇您目前所在的位置';
+          document.getElementById('pick-location-btn').style.display = '';
+          switchSheetMode('sheet-pick');
+          updateSearchBarMode();
+          const list = document.getElementById('pick-list');
+          const pois = nodes.filter(n => n.isPOI && n.id !== destinationNode.id);
+          list.innerHTML = pois.map(n => `
+            <button onclick="selectNode(nodes.find(x=>x.id==='${n.id}'))" class="w-full text-left flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white transition-colors">
+              <div class="w-9 h-9 rounded-full ${n.type==='elevator'?'bg-yellow/20 text-yellow':'bg-sage/10 text-sage'} flex items-center justify-center text-sm">
+                <i class="fa-solid ${n.type==='elevator'?'fa-elevator':n.type==='wc'?'fa-restroom':n.type==='entrance'?'fa-door-open':'fa-building'}"></i>
+              </div>
+              <div>
+                <p class="text-dark font-medium text-sm">${n.name}</p>
+                <p class="text-slate text-xs">${n.floor}F · ${typeNameMap[n.type]||n.type}</p>
+              </div>
+            </button>
+          `).join('');
+          sheet.className = 'peek';
+          return;
+        }
+
+        if (startNode.id === destinationNode.id) {
+          showToast('起點與終點相同，請重新選擇');
+          return;
+        }
+        showRouteSummary();
+      }
+
+      // 使用地標定位作為起點
+      function useMyLocationAsStart() {
+        startNode = nodes.find(n => n.id === 'node_1_in');
+        renderMap();
+        if (destinationNode) {
+          showRouteSummary();
+        } else {
+          showToast('✓ 已設定起點，請選擇終點');
+          navMode = 'pick-end';
+          updateSearchBarMode();
+          showExploreMode();
+        }
+      }
+
+      // 顯示路線摘要
+      function showRouteSummary() {
+        navMode = 'nav-summary';
+        switchSheetMode('sheet-nav');
+        document.getElementById('nav-start-name').innerText = startNode.name;
+        document.getElementById('nav-end-name').innerText = destinationNode.name;
+        const result = findShortestPath(startNode.id, destinationNode.id);
+        const dist = Math.round(result.distance);
+        const time = Math.max(1, Math.round(dist / 80));
+        const steps = Math.round(dist / 0.7);
+        document.getElementById('nav-distance').innerText = dist;
+        document.getElementById('nav-time').innerText = time;
+        sheet.className = 'peek';
+        updateSearchBarMode();
+        
+        // 鎖定起點樓層
+        activeFloor = startNode.floor;
+        document.getElementById('btn-floor').innerText = activeFloor + 'F';
+        
+        renderMap();
+        drawRoute(startNode, destinationNode);
+      }
+
+      // 階段 2: 點「開始導航」→ 畫線 + 顯示導航進行中
+      function beginNavigation() {
+        isNavigating = true;
+        navMode = 'nav-active';
+        switchSheetMode('sheet-nav-active');
+        document.getElementById('nav-active-dest').innerText = destinationNode.name;
+        
+        // 鎖定起點樓層
+        activeFloor = startNode.floor;
+        document.getElementById('btn-floor').innerText = activeFloor + 'F';
+        
+        document.getElementById('nav-active-info').innerText =
+          `${startNode.name} → ${destinationNode.name} · ${activeFloor}F`;
+        sheet.className = 'peek';
+        updateSearchBarMode();
+        renderMap();
+        drawRoute(startNode, destinationNode);
+      }
+
+      // 取消規劃（回到 POI 模式）
+      function cancelPlan() {
+        destinationNode = null;
+        navMode = 'poi';
+        document.getElementById('floor-transition-btn').classList.add('hidden');
+        if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+        switchSheetMode('sheet-poi');
+        sheet.className = 'peek';
+        updateSearchBarMode();
+        renderMap();
+      }
+
+      // 結束導航
+      function endNavigation() {
+        isNavigating = false;
+        document.getElementById('floor-transition-btn').classList.add('hidden');
+        if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+        startNode = null;
+        destinationNode = null;
+        navMode = 'explore';
+        renderMap();
+        showExploreMode();
+      }
+
+      // === 搜尋列導航模式互動 ===
+      function swapStartEnd() {
+        if (!startNode || !destinationNode) {
+          showToast('請先設定起點與終點');
+          return;
+        }
+        [startNode, destinationNode] = [destinationNode, startNode];
+        showToast('已交換起終點');
+        if (navMode === 'nav-summary') showRouteSummary();
+        else if (navMode === 'nav-active') { updateSearchBarMode(); }
+        else updateSearchBarMode();
+      }
+
+      function editNavPoint(field) {
+        // 如果已在編輯另一個欄位，先復原
+        if (editingNavField && editingNavField !== field) finishNavEdit();
+        editingNavField = field;
+        const btn = document.getElementById(`nav-bar-${field}`);
+        const input = document.getElementById(`nav-input-${field}`);
+        const currentNode = field === 'start' ? startNode : destinationNode;
+        btn.classList.add('hidden');
+        input.classList.remove('hidden');
+        // 預填原本的名稱並全選，方便直接覆蓋或按 Esc 取消
+        input.value = currentNode ? currentNode.name : '';
+        input.focus();
+        input.select();
+      }
+
+      // blur 時延遲復原（避免點搜尋結果時因 blur 先觸發導致結果消失）
+      function onNavInputBlur() {
+        setTimeout(() => {
+          if (!editingNavField) return;
+          document.getElementById('search-results').style.display = 'none';
+          finishNavEdit();
+          updateSearchBarMode();
+        }, 200);
+      }
+
+      // 雙欄內搜尋輸入
+      function onNavSearchInput(val) {
+        const box = document.getElementById('search-results');
+        if (!val.trim()) { box.style.display = 'none'; return; }
+        const q = val.toLowerCase();
+        const results = nodes.filter(n => n.isPOI && n.name.toLowerCase().includes(q));
+        if (results.length === 0) {
+          box.innerHTML = '<p class="px-4 py-3 text-sm text-slate">找不到結果</p>';
+        } else {
+          box.innerHTML = results.map(n => `
+            <button onclick="navSearchSelect('${n.id}')" class="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-bg transition-colors border-b border-border/30 last:border-0">
+              <div class="w-8 h-8 rounded-full ${n.type==='elevator'?'bg-yellow/20 text-yellow':'bg-sage/10 text-sage'} flex items-center justify-center text-xs">
+                <i class="fa-solid ${n.type==='elevator'?'fa-elevator':n.type==='wc'?'fa-restroom':n.type==='entrance'?'fa-door-open':'fa-building'}"></i>
+              </div>
+              <div>
+                <p class="text-dark font-medium text-sm">${n.name}</p>
+                <p class="text-slate text-xs">${n.floor}F · ${typeNameMap[n.type]||n.type}</p>
+              </div>
+            </button>
+          `).join('');
+        }
+        box.style.display = 'block';
+      }
+
+      // 雙欄內搜尋選取
+      function navSearchSelect(nodeId) {
+        const node = nodes.find(n => n.id === nodeId);
+        document.getElementById('search-results').style.display = 'none';
+        addRecentSearch(nodeId);
+        if (editingNavField === 'start') {
+          startNode = node;
+        } else {
+          destinationNode = node;
+        }
+        finishNavEdit();
+        if (startNode && destinationNode) {
+          if (startNode.id === destinationNode.id) {
+            showToast('起點與終點相同，請重新選擇');
+            updateSearchBarMode();
+          } else {
+            showRouteSummary();
+          }
+        } else {
+          updateSearchBarMode();
+        }
+      }
+
+      // 結束編輯，復原 input → button
+      function finishNavEdit() {
+        if (!editingNavField) return;
+        const btn = document.getElementById(`nav-bar-${editingNavField}`);
+        const input = document.getElementById(`nav-input-${editingNavField}`);
+        btn.classList.remove('hidden');
+        input.classList.add('hidden');
+        input.value = '';
+        editingNavField = null;
+      }
+
+      function cancelNavBar() {
+        finishNavEdit();
+        if (isNavigating) { endNavigation(); return; }
+        startNode = null;
+        destinationNode = null;
+        navMode = 'explore';
+        showExploreMode();
+        renderMap();
+      }
+
+      // === 5. 繪製地圖標記 ===
+      function renderMap() {
+        markersLayer.clearLayers();
+        const outdoorMode = selectedBuilding === '__outdoor__';
+        nodes
+          .filter((n) => outdoorMode ? n.isGroundLevel : (n.floor === activeFloor || n.isGroundLevel))
+          .forEach((node) => {
+            if (!node.isPOI) return;
+            if (activeFilter !== 'all' && node.type !== activeFilter) return;
+
+            let iconHtml = '<i class="fa-solid fa-location-dot"></i>';
+            let extraClass = "poi";
+            if (node.type === "elevator") {
+              iconHtml = '<i class="fa-solid fa-elevator"></i>';
+              extraClass = "elevator";
+            } else if (node.type === "wc") {
+              iconHtml = '<i class="fa-solid fa-restroom"></i>';
+            } else if (node.type === "entrance") {
+              iconHtml = '<i class="fa-solid fa-door-open"></i>';
+            }
+            // 非目前樓層的地面節點半透明顯示（室外模式下全部清晰）
+            if (!outdoorMode && node.isGroundLevel && node.floor !== activeFloor) {
+              extraClass += " ground-other-floor";
+            }
+
+            const icon = L.divIcon({
+              className: `custom-marker ${extraClass}`,
+              html: iconHtml,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
+            });
+
+            L.marker(node.coordinates, { icon })
+              .addTo(markersLayer)
+              .on("click", (e) => { L.DomEvent.stopPropagation(e); selectNode(node); });
+          });
+
+        // 起點標記 (Sage Green + 脈衝動畫)
+        if (startNode && startNode.floor === activeFloor) {
+          const startIcon = L.divIcon({
+            className: 'custom-marker start-marker start-pulse',
+            html: '<i class="fa-solid fa-person-walking"></i>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+          L.marker(startNode.coordinates, { icon: startIcon, interactive: false }).addTo(markersLayer);
+        }
+
+        // 終點標記 (Slate Blue 旗幟)
+        if (destinationNode && destinationNode.floor === activeFloor) {
+          const endIcon = L.divIcon({
+            className: 'custom-marker end-marker',
+            html: '<i class="fa-solid fa-flag-checkered"></i>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+          L.marker(destinationNode.coordinates, { icon: endIcon, interactive: false }).addTo(markersLayer);
+        }
+      }
+
+      // === 6. A* 路徑搜尋與路徑繪製 ===
+      function simulatePathfinding(start, end) {
+        const result = findShortestPath(start.id, end.id);
+        return result.path;
+      }
+
+      let currentElevatorTarget = null;
+
+      function drawRoute(start, end) {
+        if (routeLayer) map.removeLayer(routeLayer);
+        routeLayer = null;
+        document.getElementById('floor-transition-btn').classList.add('hidden');
+
+        const pathNodes = simulatePathfinding(start, end);
+        if (!pathNodes || pathNodes.length < 2) return;
+
+        // 收集目前樓層的路徑線段（含跨樓層的轉接點）
+        const segments = [];
+        let currentSegment = [];
+
+        for (let i = 0; i < pathNodes.length; i++) {
+          const node = pathNodes[i];
+          const prevNode = i > 0 ? pathNodes[i - 1] : null;
+          const nextNode = i < pathNodes.length - 1 ? pathNodes[i + 1] : null;
+
+          if (node.floor === activeFloor) {
+            currentSegment.push(node.coordinates);
+          } else {
+            // 這個節點不在目前樓層
+            // 如果前一個節點在目前樓層，把當前線段收尾
+            if (currentSegment.length > 0) {
+              // 將垂直轉接點的座標也加進去（因為電梯/樓梯同座標）
+              currentSegment.push(node.coordinates);
+              segments.push([...currentSegment]);
+              currentSegment = [];
+            }
+            // 如果下一個節點在目前樓層，開始新的線段（從轉接點座標開始）
+            if (nextNode && nextNode.floor === activeFloor) {
+              currentSegment.push(node.coordinates);
+            }
+          }
+        }
+        // 收尾最後一段
+        if (currentSegment.length > 1) {
+          segments.push(currentSegment);
+        }
+
+        // 繪製所有目前樓層的線段
+        if (segments.length > 0) {
+          const allLines = segments.map(seg =>
+            L.polyline(seg, {
+              color: "#708191",
+              weight: 6,
+              opacity: 0.9,
+              className: "route-flowing",
+            })
+          );
+          routeLayer = L.layerGroup(allLines).addTo(map);
+          
+          // 將視角調整到包含所有線段的範圍
+          const allCoords = segments.flat();
+          if (allCoords.length > 0) {
+            const bounds = L.latLngBounds(allCoords);
+            map.fitBounds(bounds, { padding: [50, 50] });
+          }
+        }
+
+        // 偵測是否需要跨樓層轉換（電梯、樓梯、或室外走道）
+        let hitsVertical = false;
+        let transitionNode = null;
+        currentElevatorTarget = null;
+
+        for (let i = 0; i < pathNodes.length; i++) {
+          const node = pathNodes[i];
+          if (
+            node.floor === activeFloor &&
+            i < pathNodes.length - 1 &&
+            pathNodes[i + 1].floor !== activeFloor
+          ) {
+            hitsVertical = true;
+            currentElevatorTarget = pathNodes[i + 1].floor;
+            transitionNode = node;
+            break;
+          }
+        }
+
+        if (hitsVertical && currentElevatorTarget !== null && transitionNode) {
+          showFloorTransitionBtn(transitionNode.type, transitionNode.name, currentElevatorTarget);
+        }
+      }
+
+      // === 7. 跨樓層 UI 膠囊按鈕 ===
+      function showFloorTransitionBtn(type, name, targetFloor) {
+        const isElevator = type === 'elevator';
+        const isStair = type === 'staircase';
+        const prefix = (isElevator || isStair) ? '搭乘' : '走';
+        const typeName = isElevator ? '電梯' : isStair ? '樓梯' : '室外走道';
+        document.getElementById('transition-prefix').innerText = prefix;
+        document.getElementById('transition-type-name').innerText = typeName;
+        document.getElementById('transition-target-floor').innerText = targetFloor;
+        
+        const btn = document.getElementById('floor-transition-btn');
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+      }
+
+      function executeFloorTransition() {
+        const btn = document.getElementById('floor-transition-btn');
+        btn.classList.add('hidden');
+        btn.classList.remove('flex');
+
+        // 切換樓層並繼續畫線
+        if (currentElevatorTarget !== null) {
+          activeFloor = currentElevatorTarget;
+          document.getElementById("btn-floor").innerText = activeFloor + "F";
+          renderMap();
+          drawRoute(startNode, destinationNode);
+          
+          if (navMode === 'nav-active') {
+            document.getElementById('nav-active-info').innerText = 
+              `${startNode.name} → ${destinationNode.name} · ${activeFloor}F`;
+          }
+        }
+      }
+
+      // Initial Render
+      fetch('map_data.json')
+        .then(r => r.json())
+        .then(data => {
+          buildings = data.buildings || [];
+          if (buildings.length > 0 && !selectedBuilding) selectedBuilding = buildings[0].id;
+
+          const rawNodes = data.nodes || [];
+          const rawEdges = data.edges || [];
+
+          nodes = [];
+          const newEdges = [];
+          const expandedIds = {}; // rawId -> { floor: newId }
+
+          // 1. 展開節點 (Virtual Node Expansion)
+          rawNodes.forEach(rn => {
+            const floors = rn.floors || [rn.floor !== undefined ? rn.floor : 1];
+            if (floors.length <= 1) {
+              rn.floor = floors[0];
+              nodes.push(rn);
+              expandedIds[rn.id] = { [rn.floor]: rn.id };
+            } else {
+              expandedIds[rn.id] = {};
+              floors.forEach(f => {
+                const newId = `${rn.id}_F${f}`;
+                nodes.push({
+                  ...rn,
+                  id: newId,
+                  floor: f, // 降級為單一物理實體，以無縫接軌原演算法
+                  originalId: rn.id,
+                  building: rn.building  // 繼承 building 屬性
+                });
+                expandedIds[rn.id][f] = newId;
+              });
+              // 只有電梯/樓梯/室外走道才能跨樓層，走廊等節點僅是在各樓層複製相同位置，不建立垂直連線
+              if (rn.type === 'elevator' || rn.type === 'staircase' || rn.type === 'outdoor_corridor') {
+                const sortedFloors = [...floors].sort((a,b)=>a-b);
+                for(let i=0; i<sortedFloors.length-1; i++) {
+                  newEdges.push({
+                    source: expandedIds[rn.id][sortedFloors[i]],
+                    target: expandedIds[rn.id][sortedFloors[i+1]],
+                    isVertical: true,
+                    verticalPenalty: 150
+                  });
+                }
+              }
+            }
+          });
+
+          // 2. 重組與投影連線 (Edge Mapping)
+          rawEdges.forEach(e => {
+            if (e.isVertical) {
+               // 處理舊資料中殘留的手動垂直連接 (相容性保障)
+               const sRaw = rawNodes.find(n => n.id === e.source);
+               const tRaw = rawNodes.find(n => n.id === e.target);
+               if (sRaw && tRaw) {
+                 const sFloor = sRaw.floors ? sRaw.floors[0] : (sRaw.floor || 1);
+                 const tFloor = tRaw.floors ? tRaw.floors[0] : (tRaw.floor || 1);
+                 const sId = expandedIds[e.source] ? expandedIds[e.source][sFloor] : e.source;
+                 const tId = expandedIds[e.target] ? expandedIds[e.target][tFloor] : e.target;
+                 newEdges.push({ ...e, source: sId || e.source, target: tId || e.target });
+               } else {
+                 newEdges.push(e);
+               }
+               return;
+            }
+
+            // 一般的水平連接：找出兩者 "共同擁有的樓層"，並為每一層建立對應實體連線
+            const sRaw = rawNodes.find(n => n.id === e.source);
+            const tRaw = rawNodes.find(n => n.id === e.target);
+            if (!sRaw || !tRaw) return;
+
+            const sFloors = sRaw.floors || [sRaw.floor || 1];
+            const tFloors = tRaw.floors || [tRaw.floor || 1];
+
+            // 室外走道邊：可跨樓層直接連接（山坡地形的戶外通道）
+            if (e.isOutdoor) {
+              sFloors.forEach(sf => {
+                tFloors.forEach(tf => {
+                  const sId = expandedIds[e.source]?.[sf];
+                  const tId = expandedIds[e.target]?.[tf];
+                  if (sId && tId) {
+                    newEdges.push({ ...e, source: sId, target: tId, isVertical: true, verticalPenalty: e.verticalPenalty ?? 20 });
+                  }
+                });
+              });
+              return;
+            }
+
+            sFloors.filter(f => tFloors.includes(f)).forEach(f => {
+               newEdges.push({
+                 ...e,
+                 source: expandedIds[e.source][f],
+                 target: expandedIds[e.target][f]
+               });
+            });
+          });
+
+          edges = newEdges;
+          renderMap();
+          showExploreMode();
+          renderDrawerFavorites();
+        });
+    </script>
+  </body>
+</html>
