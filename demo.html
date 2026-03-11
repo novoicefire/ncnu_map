@@ -566,6 +566,7 @@
 
       let nodes = [];
       let edges = [];
+      let rawPaths = [];
 
       // === Haversine 距離計算 & Dijkstra 最短路徑 ===
       function haversineDistance(lat1, lng1, lat2, lng2) {
@@ -591,24 +592,23 @@
         return { x: ax + t * dx, y: ay + t * dy, t };
       }
 
-      // --- 將 POI 投影到最近的走廊線段 ---
-      function snapToCorridorNetwork(nodeId, tempNodes, tempEdges) {
+      // 將 POI 節點投影到最近的路徑線段
+      function snapToPathNetwork(nodeId, tempNodes, tempEdges) {
         const node = tempNodes.find(n => n.id === nodeId);
-        if (!node) return nodeId;
+        if (!node) return;
 
-        // 如果節點已在走廊網路中（有 edge 連接），不需要投影
+        // 如果節點已在路徑網路中（有 edge 連接），不需投影
         const hasEdge = tempEdges.some(e => e.source === nodeId || e.target === nodeId);
-        if (hasEdge) return nodeId;
+        if (hasEdge) return;
 
-        // 取得同樓層的走廊 edges
+        // 找同樓層最近的路徑線段
         let bestDist = Infinity, bestProj = null, bestEdgeIdx = -1;
         tempEdges.forEach((e, idx) => {
+          if (e.isVertical) return;
           const sNode = tempNodes.find(n => n.id === e.source);
           const tNode = tempNodes.find(n => n.id === e.target);
           if (!sNode || !tNode) return;
-          // 只考慮同樓層、非垂直的走廊邊
-          if (e.isVertical) return;
-          if (sNode.floor !== node.floor && tNode.floor !== node.floor) return;
+          if (sNode.floor !== node.floor || tNode.floor !== node.floor) return;
 
           const proj = pointToSegmentProjection(
             node.coordinates[0], node.coordinates[1],
@@ -616,51 +616,41 @@
             tNode.coordinates[0], tNode.coordinates[1]
           );
           const d = haversineDistance(node.coordinates[0], node.coordinates[1], proj.x, proj.y);
-          if (d < bestDist) {
-            bestDist = d;
-            bestProj = proj;
-            bestEdgeIdx = idx;
-          }
+          if (d < bestDist) { bestDist = d; bestProj = proj; bestEdgeIdx = idx; }
         });
 
-        if (bestEdgeIdx === -1) return nodeId; // 無走廊可投影
+        if (bestEdgeIdx === -1) return;
 
         const edge = tempEdges[bestEdgeIdx];
         const sNode = tempNodes.find(n => n.id === edge.source);
         const tNode = tempNodes.find(n => n.id === edge.target);
 
-        // 如果投影點非常接近既有端點（<1m），直接連接到端點
+        // 如果投影點非常接近既有端點（<2m），直接連接
         const distToSource = haversineDistance(bestProj.x, bestProj.y, sNode.coordinates[0], sNode.coordinates[1]);
         const distToTarget = haversineDistance(bestProj.x, bestProj.y, tNode.coordinates[0], tNode.coordinates[1]);
-        if (distToSource < 1) {
+        if (distToSource < 2) {
           tempEdges.push({ source: nodeId, target: edge.source, isVertical: false });
-          return nodeId;
+          return;
         }
-        if (distToTarget < 1) {
+        if (distToTarget < 2) {
           tempEdges.push({ source: nodeId, target: edge.target, isVertical: false });
-          return nodeId;
+          return;
         }
 
         // 建立虛擬投影節點
         const vpId = '__vp_' + nodeId;
         tempNodes.push({
-          id: vpId,
-          name: '投影點',
-          type: 'corridor',
+          id: vpId, name: '投影點', type: 'waypoint',
           floor: node.floor,
           coordinates: [parseFloat(bestProj.x.toFixed(6)), parseFloat(bestProj.y.toFixed(6))],
           isPOI: false,
         });
 
-        // 移除原始走廊邊，用兩條新邊取代（虛擬節點把邊一分為二）
+        // 分割原始線段
         tempEdges.splice(bestEdgeIdx, 1);
         tempEdges.push({ source: edge.source, target: vpId, isVertical: false });
         tempEdges.push({ source: vpId, target: edge.target, isVertical: false });
-
-        // 連接 POI → 虛擬投影節點
         tempEdges.push({ source: nodeId, target: vpId, isVertical: false });
-
-        return nodeId;
       }
 
       function findShortestPath(startId, endId) {
@@ -668,9 +658,9 @@
         const tempNodes = nodes.map(n => ({ ...n, coordinates: [...n.coordinates] }));
         const tempEdges = edges.map(e => ({ ...e }));
 
-        // 將非走廊網路的 POI 節點投影到最近的走廊線段
-        snapToCorridorNetwork(startId, tempNodes, tempEdges);
-        snapToCorridorNetwork(endId, tempNodes, tempEdges);
+        // 將起終點投影到最近的路徑線段
+        snapToPathNetwork(startId, tempNodes, tempEdges);
+        snapToPathNetwork(endId, tempNodes, tempEdges);
 
         // 建立鄰接表
         const adj = {};
@@ -1131,7 +1121,7 @@
       }
 
       // --- 模式切換系統 ---
-      const typeNameMap = { elevator:'電梯', wc:'洗手間', entrance:'出入口', office:'辦公室', corridor:'走廊', staircase:'樓梯', outdoor_corridor:'室外走道' };
+      const typeNameMap = { elevator:'電梯', wc:'洗手間', entrance:'出入口', office:'辦公室', staircase:'樓梯' };
       const allSheetModes = ['sheet-explore','sheet-poi','sheet-pick','sheet-nav','sheet-nav-active'];
 
       function switchSheetMode(mode) {
@@ -1674,13 +1664,13 @@
           if (buildings.length > 0 && !selectedBuilding) selectedBuilding = buildings[0].id;
 
           const rawNodes = data.nodes || [];
-          const rawEdges = data.edges || [];
+          rawPaths = data.paths || [];
 
           nodes = [];
           const newEdges = [];
           const expandedIds = {}; // rawId -> { floor: newId }
 
-          // 1. 展開節點 (Virtual Node Expansion)
+          // 1. 展開 POI 節點 (Virtual Node Expansion)
           rawNodes.forEach(rn => {
             const floors = rn.floors || [rn.floor !== undefined ? rn.floor : 1];
             if (floors.length <= 1) {
@@ -1694,14 +1684,14 @@
                 nodes.push({
                   ...rn,
                   id: newId,
-                  floor: f, // 降級為單一物理實體，以無縫接軌原演算法
+                  floor: f,
                   originalId: rn.id,
-                  building: rn.building  // 繼承 building 屬性
+                  building: rn.building
                 });
                 expandedIds[rn.id][f] = newId;
               });
-              // 只有電梯/樓梯/室外走道才能跨樓層，走廊等節點僅是在各樓層複製相同位置，不建立垂直連線
-              if (rn.type === 'elevator' || rn.type === 'staircase' || rn.type === 'outdoor_corridor') {
+              // 電梯/樓梯可跨樓層
+              if (rn.type === 'elevator' || rn.type === 'staircase') {
                 const sortedFloors = [...floors].sort((a,b)=>a-b);
                 for(let i=0; i<sortedFloors.length-1; i++) {
                   newEdges.push({
@@ -1715,52 +1705,45 @@
             }
           });
 
-          // 2. 重組與投影連線 (Edge Mapping)
-          rawEdges.forEach(e => {
-            if (e.isVertical) {
-               // 處理舊資料中殘留的手動垂直連接 (相容性保障)
-               const sRaw = rawNodes.find(n => n.id === e.source);
-               const tRaw = rawNodes.find(n => n.id === e.target);
-               if (sRaw && tRaw) {
-                 const sFloor = sRaw.floors ? sRaw.floors[0] : (sRaw.floor || 1);
-                 const tFloor = tRaw.floors ? tRaw.floors[0] : (tRaw.floor || 1);
-                 const sId = expandedIds[e.source] ? expandedIds[e.source][sFloor] : e.source;
-                 const tId = expandedIds[e.target] ? expandedIds[e.target][tFloor] : e.target;
-                 newEdges.push({ ...e, source: sId || e.source, target: tId || e.target });
-               } else {
-                 newEdges.push(e);
-               }
-               return;
-            }
+          // 2. 展開路徑為每層的路徑點節點與線段連線
+          // 收集每棟建築在所有節點中出現過的樓層
+          function getBuildingFloors(buildingId) {
+            const floorSet = new Set();
+            rawNodes.forEach(n => {
+              if (n.building === buildingId) {
+                (n.floors || [n.floor || 1]).forEach(f => floorSet.add(f));
+              }
+            });
+            return [...floorSet].sort((a,b) => a-b);
+          }
 
-            // 一般的水平連接：找出兩者 "共同擁有的樓層"，並為每一層建立對應實體連線
-            const sRaw = rawNodes.find(n => n.id === e.source);
-            const tRaw = rawNodes.find(n => n.id === e.target);
-            if (!sRaw || !tRaw) return;
+          rawPaths.forEach(p => {
+            // 取得此路徑所在建築的所有樓層
+            const pathFloors = p.building ? getBuildingFloors(p.building) : [1];
+            if (pathFloors.length === 0) pathFloors.push(1);
 
-            const sFloors = sRaw.floors || [sRaw.floor || 1];
-            const tFloors = tRaw.floors || [tRaw.floor || 1];
-
-            // 室外走道邊：可跨樓層直接連接（山坡地形的戶外通道）
-            if (e.isOutdoor) {
-              sFloors.forEach(sf => {
-                tFloors.forEach(tf => {
-                  const sId = expandedIds[e.source]?.[sf];
-                  const tId = expandedIds[e.target]?.[tf];
-                  if (sId && tId) {
-                    newEdges.push({ ...e, source: sId, target: tId, isVertical: true, verticalPenalty: e.verticalPenalty ?? 20 });
-                  }
+            pathFloors.forEach(floor => {
+              // 為每個路徑頂點建立路徑點節點
+              p.points.forEach((pt, idx) => {
+                nodes.push({
+                  id: `${p.id}_v${idx}_F${floor}`,
+                  name: '路徑點',
+                  type: 'waypoint',
+                  floor: floor,
+                  coordinates: [...pt],
+                  isPOI: false,
+                  building: p.building || undefined,
                 });
               });
-              return;
-            }
 
-            sFloors.filter(f => tFloors.includes(f)).forEach(f => {
-               newEdges.push({
-                 ...e,
-                 source: expandedIds[e.source][f],
-                 target: expandedIds[e.target][f]
-               });
+              // 為每條線段建立連線
+              (p.segments || []).forEach(seg => {
+                newEdges.push({
+                  source: `${p.id}_v${seg[0]}_F${floor}`,
+                  target: `${p.id}_v${seg[1]}_F${floor}`,
+                  isVertical: false,
+                });
+              });
             });
           });
 
