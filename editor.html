@@ -57,11 +57,12 @@
       /* Visual hints */
       .hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: rgba(15, 23, 42, 0.9); color: #fff; padding: 10px 20px; border-radius: 12px; font-size: 14px; font-weight: 500;
-        pointer-events: none; transition: opacity 0.3s, transform 0.3s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); backdrop-filter: blur(4px); }
+        pointer-events: none; transition: opacity 0.3s, transform 0.3s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+      #hint { opacity: 0; }
       /* Polygon edit action bar */
       #poly-bar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: rgba(15, 23, 42, 0.92); color: #fff; padding: 8px 16px; border-radius: 12px; font-size: 13px;
-        display: none; align-items: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); backdrop-filter: blur(4px); white-space: nowrap; }
+        display: none; align-items: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); white-space: nowrap; }
       #poly-bar.show { display: flex; }
       #poly-bar button { padding: 3px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
       #poly-bar .btn-confirm { background: #22c55e; color: #fff; }
@@ -72,38 +73,48 @@
       /* Path edit action bar */
       #path-bar { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: rgba(15, 23, 42, 0.92); color: #fff; padding: 8px 16px; border-radius: 12px; font-size: 13px;
-        display: none; align-items: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); backdrop-filter: blur(4px); white-space: nowrap; }
+        display: none; align-items: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); white-space: nowrap; }
       #path-bar.show { display: flex; }
       #path-bar button { padding: 3px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
       #path-bar .btn-confirm { background: #22c55e; color: #fff; }
       #path-bar .btn-confirm:hover { background: #16a34a; }
       #path-bar .btn-cancel { background: rgba(255,255,255,0.15); color: #fff; }
       #path-bar .btn-cancel:hover { background: rgba(255,255,255,0.25); }
-      .path-ghost-vertex { width: 12px; height: 12px; background: rgba(245, 158, 11, 0.7); border: 2px solid white; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.4); transform: translate(-6px, -6px); cursor: pointer; pointer-events: auto; }
+      .path-ghost-vertex { width: 20px; height: 20px; background: rgba(245, 158, 11, 0.7); border: 2px solid white; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.4); transform: translate(-10px, -10px); cursor: pointer; pointer-events: auto; }
 
       /* Grab cursor for map */
       .leaflet-interactive { cursor: grab !important; }
       .leaflet-interactive:active { cursor: grabbing !important; }
 
       /* Batch Delete Modal */
-      #batch-delete-overlay, #building-manager-overlay {
+      #batch-delete-overlay, #building-manager-overlay, #validation-overlay {
         position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999;
         display: none; align-items: center; justify-content: center;
+        -webkit-backdrop-filter: blur(3px);
         backdrop-filter: blur(3px);
       }
-      #batch-delete-overlay.active, #building-manager-overlay.active { display: flex; }
+      #batch-delete-overlay.active, #building-manager-overlay.active, #validation-overlay.active { display: flex; }
       #batch-delete-modal {
         background: #fff; border-radius: 16px; width: 420px; max-height: 80vh;
         box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
         display: flex; flex-direction: column; overflow: hidden;
         animation: modalIn 0.2s ease-out;
       }
+      .modal-wide { width: 560px !important; max-height: 85vh !important; }
+      #import-file-input { display: none; }
+      #path-edit-content { display: none; flex: 1; overflow-y: auto; padding: 20px; }
+      #ground-level-section { display: none; }
+      .summary-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 9999px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 11px; font-weight: 700; color: #475569; }
+      .issue-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 10px; font-weight: 700; }
+      .issue-pill.error { background: #fef2f2; color: #b91c1c; }
+      .issue-pill.warning { background: #fffbeb; color: #b45309; }
+      .issue-pill.info { background: #eff6ff; color: #1d4ed8; }
       @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: none; } }
     </style>
   </head>
   <body>
     <div id="map"></div>
-    <div id="hint" class="hint" style="opacity:0">點擊地圖設定節點座標</div>
+    <div id="hint" class="hint">點擊地圖設定節點座標</div>
     <div id="path-bar">
       <span id="path-bar-text"></span>
       <button class="btn-confirm" onclick="finishDrawPath()"><i class="fa-solid fa-check mr-1"></i>完成</button>
@@ -114,6 +125,7 @@
       <button class="btn-confirm" onclick="confirmPolygonEdit()"><i class="fa-solid fa-check mr-1"></i>完成</button>
       <button class="btn-cancel" onclick="cancelPolygonEdit()">取消</button>
     </div>
+    <input id="import-file-input" type="file" accept="application/json,.json" onchange="handleImportFile(event)" />
 
     <!-- ===== 批量刪除 Modal ===== -->
     <div id="batch-delete-overlay" onclick="if(event.target===this)closeBatchDelete()">
@@ -187,6 +199,16 @@
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               <input id="bm-new-id" type="text" placeholder="建築 ID（例：mgmt，英數字）"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" />
+              <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                <label for="bm-new-real-floor-1" class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">建築 1F 對應真實樓層</label>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-bold text-slate-700">1F =</span>
+                  <input id="bm-new-real-floor-1" type="number" step="1" placeholder="例：-3"
+                    class="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                  <span class="text-sm text-slate-500">真實樓層</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2 leading-relaxed">只要填這棟建築的 1F 在真實樓層幾，其他樓層會依照 1F、2F、3F 連續自動推算。</p>
+              </div>
               <button onclick="startPolygonEdit(null)"
                 class="w-full py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
                 <i class="fa-solid fa-draw-polygon"></i>
@@ -205,12 +227,40 @@
       </div>
     </div>
 
+    <div id="validation-overlay" onclick="if(event.target===this)closeValidation()">
+      <div id="batch-delete-modal" class="modal-wide">
+        <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-emerald-50">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-shield-heart text-emerald-600"></i>
+            <span class="font-bold text-gray-800">資料驗證報告</span>
+          </div>
+          <button onclick="closeValidation()" class="w-8 h-8 rounded-full bg-white text-gray-400 hover:text-gray-700 flex items-center justify-center text-sm border border-gray-200">&times;</button>
+        </div>
+        <div class="p-5 overflow-y-auto flex-1 space-y-4">
+          <div id="validation-summary" class="grid grid-cols-3 gap-3"></div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">資料概況</div>
+            <div id="validation-stats" class="text-sm text-slate-700 leading-6"></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-wider">檢查項目</div>
+              <button onclick="runValidation(true)" class="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                <i class="fa-solid fa-rotate mr-1"></i>重新檢查
+              </button>
+            </div>
+            <div id="validation-issues" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="sidebar">
       <header class="p-4 border-b border-gray-200 bg-white z-10 shrink-0 shadow-sm">
         <h1 class="text-lg font-bold text-gray-800">地圖節點編輯器</h1>
-        <p class="text-[11px] text-gray-500 mt-0.5">點擊地圖設定座標 · 右側面板編輯屬性</p>
+        <p class="text-[11px] text-gray-500 mt-0.5">點擊地圖設定座標 · 右側面板編輯屬性 · 可直接驗證與匯入圖資</p>
         <div class="flex gap-2 mt-3">
-          <select id="floor-filter" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" onchange="renderAll()">
+          <select id="floor-filter" title="篩選顯示樓層" aria-label="篩選顯示樓層" class="text-sm border border-gray-300 rounded-lg px-2 py-1.5 flex-1 bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" onchange="renderAll()">
             <option value="all">全部樓層</option>
           </select>
           <button onclick="addNode()" class="text-sm bg-slate-700 text-white px-3.5 py-1.5 rounded-lg hover:bg-slate-800 transition-colors shadow-sm font-medium whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>節點</button>
@@ -219,6 +269,15 @@
             <i class="fa-solid fa-building mr-1"></i>建築
           </button>
         </div>
+        <div class="flex gap-2 mt-2">
+          <button onclick="openImportFile()" class="flex-1 text-xs bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+            <i class="fa-solid fa-file-import mr-1"></i>匯入 JSON
+          </button>
+          <button onclick="runValidation(true)" class="flex-1 text-xs bg-white border border-emerald-200 text-emerald-700 px-3 py-2 rounded-lg hover:bg-emerald-50 transition-colors font-medium">
+            <i class="fa-solid fa-shield-halved mr-1"></i>驗證
+          </button>
+        </div>
+        <div id="dataset-summary" class="flex flex-wrap gap-2 mt-3"></div>
       </header>
 
       <div id="node-list"></div>
@@ -230,7 +289,7 @@
         </div>
 
         <!-- Path edit content (dynamically populated) -->
-        <div id="path-edit-content" class="space-y-6" style="display:none; flex:1; overflow-y:auto; padding:20px;"></div>
+        <div id="path-edit-content" class="space-y-6"></div>
 
         <!-- Node edit content -->
         <div id="edit-panel-content" class="space-y-6">
@@ -238,31 +297,54 @@
           <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">基本資訊</h3>
             <div>
-              <label class="text-xs text-gray-500 mb-1 block">節點 ID</label>
-              <input id="edit-id" readonly class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 font-mono" />
+              <label for="edit-id" class="text-xs text-gray-500 mb-1 block">節點 ID</label>
+              <input id="edit-id" title="節點 ID" aria-label="節點 ID" readonly class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 font-mono" />
             </div>
             <div>
-              <label class="text-xs text-gray-600 mb-1 block">名稱</label>
-              <input id="edit-name" oninput="updateField('name', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              <label for="edit-name" class="text-xs text-gray-600 mb-1 block">名稱</label>
+              <input id="edit-name" title="節點名稱" aria-label="節點名稱" oninput="updateField('name', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+            </div>
+            <div>
+              <label class="text-xs text-gray-600 mb-1 block">描述</label>
+              <textarea id="edit-desc" rows="3" oninput="updateField('desc', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-y" placeholder="用於前台地點資訊與探索卡片"></textarea>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="text-xs text-gray-600 mb-1 block">類型</label>
-                <select id="edit-type" onchange="updateField('type', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                <label class="text-xs text-gray-600 mb-1 block">開放時間</label>
+                <input id="edit-hours" oninput="updateField('hours', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="例：08:00 - 21:00" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">別名</label>
+                <input id="edit-aliases" oninput="updateListField('aliases', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="逗號分隔" />
+              </div>
+            </div>
+            <div>
+              <label class="text-xs text-gray-600 mb-1 block">搜尋關鍵詞</label>
+              <input id="edit-keywords" oninput="updateListField('keywords', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="例：中庭, 無障礙, 咖啡" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="edit-type" class="text-xs text-gray-600 mb-1 block">類型</label>
+                <select id="edit-type" title="節點類型" aria-label="節點類型" onchange="updateField('type', this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
                   <option value="entrance">🚪 出入口</option>
                   <option value="elevator">🛗 電梯</option>
                   <option value="staircase">🪜 樓梯</option>
                   <option value="wc">🚻 洗手間</option>
                   <option value="office">💼 辦公室</option>
                   <option value="classroom">🎓 教室</option>
+                  <option value="parking">🅿️ 停車場</option>
                 </select>
               </div>
               <div>
-                <label class="text-xs text-gray-600 mb-1 block">顯示樓層</label>
+                <label class="text-xs text-gray-600 mb-1 block">建築樓層</label>
                 <div class="relative">
                   <input id="edit-floors" type="text" placeholder="例: 1, 2, 3F" oninput="updateFloorsField(this.value)" class="w-full border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none placeholder-gray-300" />
                   <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">F</span>
                 </div>
+              </div>
+              <div>
+                <label class="text-xs text-gray-600 mb-1 block">真實樓層</label>
+                <input id="edit-real-floors" type="text" placeholder="例: -1, 1, 2" oninput="updateRealFloorsField(this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none placeholder-gray-300" />
               </div>
             </div>
           </div>
@@ -277,12 +359,12 @@
             </div>
             <div class="flex gap-3">
               <div class="flex-1">
-                <label class="text-xs text-gray-500 mb-1 block">緯度 (Lat)</label>
-                <input id="edit-lat" type="number" step="0.00001" oninput="updateCoord()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono" />
+                <label for="edit-lat" class="text-xs text-gray-500 mb-1 block">緯度 (Lat)</label>
+                <input id="edit-lat" title="節點緯度" aria-label="節點緯度" type="number" step="0.00001" oninput="updateCoord()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono" />
               </div>
               <div class="flex-1">
-                <label class="text-xs text-gray-500 mb-1 block">經度 (Lng)</label>
-                <input id="edit-lng" type="number" step="0.00001" oninput="updateCoord()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono" />
+                <label for="edit-lng" class="text-xs text-gray-500 mb-1 block">經度 (Lng)</label>
+                <input id="edit-lng" title="節點經度" aria-label="節點經度" type="number" step="0.00001" oninput="updateCoord()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 font-mono" />
               </div>
             </div>
           </div>
@@ -305,17 +387,31 @@
               </div>
             </label>
 
-            <label id="ground-level-section" class="flex items-center justify-between cursor-pointer group" style="display:none;">
+            <label id="ground-level-section" class="flex items-center justify-between cursor-pointer group">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><i class="fa-solid fa-tree"></i></div>
                 <div>
-                  <div class="text-sm font-medium text-gray-700">地面可達入口</div>
-                  <div class="text-[11px] text-gray-400">建築物外可直接步行到達</div>
+                  <div class="text-sm font-medium text-gray-700">可直通戶外的出入口</div>
+                  <div class="text-[11px] text-gray-400">只用於 entrance，代表可從戶外直接進出</div>
                 </div>
               </div>
               <div class="relative inline-block w-10 h-5">
                 <input type="checkbox" id="edit-ground" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer m-0" onchange="updateField('isGroundLevel', this.checked)"/>
                 <label for="edit-ground" class="toggle-label block overflow-hidden cursor-pointer"></label>
+              </div>
+            </label>
+
+            <label class="flex items-center justify-between cursor-pointer group">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><i class="fa-solid fa-cloud-sun"></i></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-700">設為室外節點</div>
+                  <div class="text-[11px] text-gray-400">不在任何建築內部</div>
+                </div>
+              </div>
+              <div class="relative inline-block w-10 h-5">
+                <input type="checkbox" id="edit-outdoor" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer m-0" onchange="updateField('isOutdoor', this.checked)"/>
+                <label for="edit-outdoor" class="toggle-label block overflow-hidden cursor-pointer"></label>
               </div>
             </label>
           </div>
@@ -324,7 +420,7 @@
           <!-- 區塊 4：所屬建築 -->
           <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">所屬建築</h3>
-            <select id="edit-building" onchange="updateBuildingField(this.value)"
+            <select id="edit-building" title="所屬建築" aria-label="所屬建築" onchange="updateBuildingField(this.value)"
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
               <option value="">— 未分配 —</option>
             </select>
@@ -364,7 +460,8 @@
       let markers = {};
 
       // === Path state ===
-      let pathLayers = [];           // Leaflet polyline objects on map
+      let pathLayers = [];           // Leaflet polyline objects on map (regular paths)
+      let editModeLayers = [];       // Leaflet layers for path edit mode (separated to avoid conflicts)
       let selectedPathId = null;     // currently selected path
       let pathEditMode = false;      // editing vertices of a path
       let pathEditMarkers = [];      // draggable vertex markers
@@ -379,9 +476,10 @@
       let polygonEditMarkers = [];    // L.marker instances (draggable vertex handles)
       let polygonPreviewLayer = null; // L.polygon preview during editing
       let editingBuildingId = null;   // null = new building, string = existing building id
+      let lastValidationReport = null;
 
-      const typeNameMap = { elevator:'電梯', wc:'洗手間', entrance:'出入口', office:'辦公室', staircase:'樓梯', classroom:'教室' };
-      const typeIcons = { elevator:'fa-elevator', wc:'fa-restroom', entrance:'fa-door-open', office:'fa-building', staircase:'fa-stairs', classroom:'fa-chalkboard' };
+      const typeNameMap = { elevator:'電梯', wc:'洗手間', entrance:'出入口', office:'辦公室', staircase:'樓梯', classroom:'教室', parking:'停車場' };
+      const typeIcons = { elevator:'fa-elevator', wc:'fa-restroom', entrance:'fa-door-open', office:'fa-building', staircase:'fa-stairs', classroom:'fa-chalkboard', parking:'fa-square-parking' };
 
       // === Map ===
       const map = L.map("map", { zoomControl: true }).setView(MAP_CENTER, 19);
@@ -442,6 +540,7 @@
         renderPaths();
         renderNodeList();
         updateFloorOptions();
+        updateDatasetSummary();
       }
 
       // --- 拖曳狀態 ---
@@ -457,7 +556,7 @@
 
         // Draw nodes
         nodes.forEach(n => {
-          if (floorFilter !== 'all' && !n.floors.includes(parseInt(floorFilter))) return;
+          if (floorFilter !== 'all' && !getNodeDisplayFloors(n).includes(parseInt(floorFilter))) return;
           const isSelected = n.id === selectedNodeId;
           const color = isSelected ? '#708191' : (n.isPOI ? '#22c55e' : '#94a3b8');
           const marker = L.circleMarker(n.coordinates, {
@@ -468,7 +567,7 @@
             fillOpacity: 0.8,
           }).addTo(map);
 
-          marker.bindTooltip(`${n.name} (${n.floors.sort().join(',')}F)`, { direction: 'top', offset: [0, -8] });
+          marker.bindTooltip(`${n.name} (${getNodeDisplayFloors(n).join(',')}F)`, { direction: 'top', offset: [0, -8] });
 
           // --- 拖曳 + 點擊處理 ---
           marker.on('mousedown', function(ev) {
@@ -523,7 +622,7 @@
       function renderNodeList() {
         const list = document.getElementById('node-list');
         const floorFilter = document.getElementById('floor-filter').value;
-        const filtered = floorFilter === 'all' ? nodes : nodes.filter(n => n.floors.includes(parseInt(floorFilter)));
+        const filtered = floorFilter === 'all' ? nodes : nodes.filter(n => getNodeDisplayFloors(n).includes(parseInt(floorFilter)));
         
         list.className = 'flex-1 overflow-y-auto p-4 space-y-2';
         
@@ -537,12 +636,13 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-0.5">
                   <span class="text-[13px] font-bold text-gray-800 truncate">${n.name}</span>
-                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-gray-500 bg-gray-100">${n.floors.sort().join(',')}F</span>
+                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-gray-500 bg-gray-100">${getNodeDisplayFloors(n).join(',')}F</span>
                 </div>
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span class="text-[10px] text-gray-400 font-mono tracking-tighter">[${n.coordinates[0].toFixed(5)}, ${n.coordinates[1].toFixed(5)}]</span>
                   ${n.isPOI ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-green-700 bg-green-100 whitespace-nowrap"><i class="fa-solid fa-map-pin mr-0.5"></i>POI</span>' : ''}
-                  ${n.isGroundLevel ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-emerald-700 bg-emerald-100 whitespace-nowrap"><i class="fa-solid fa-tree mr-0.5"></i>地面</span>' : ''}
+                  ${n.isGroundLevel ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-emerald-700 bg-emerald-100 whitespace-nowrap"><i class="fa-solid fa-tree mr-0.5"></i>可直通戶外</span>' : ''}
+                  ${n.isOutdoor ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-blue-700 bg-blue-100 whitespace-nowrap"><i class="fa-solid fa-cloud-sun mr-0.5"></i>室外</span>' : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full text-gray-600 bg-gray-100 whitespace-nowrap"><i class="fa-solid fa-building mr-0.5"></i>室內</span>'}
                 </div>
               </div>
             </div>
@@ -554,10 +654,16 @@
       function updateFloorOptions() {
         const sel = document.getElementById('floor-filter');
         const current = sel.value;
-        const floors = [...new Set(nodes.flatMap(n => n.floors))].sort((a, b) => a - b);
+        const floors = [...new Set(nodes.flatMap(n => getNodeDisplayFloors(n)))].sort((a, b) => a - b);
         const opts = '<option value="all">全部樓層</option>' + floors.map(f => `<option value="${f}">${f}F</option>`).join('');
         sel.innerHTML = opts;
         sel.value = current;
+      }
+
+      function refreshGroundLevelUI(node) {
+        const isEntrance = node?.type === 'entrance';
+        document.getElementById('ground-level-section').style.display = isEntrance ? 'flex' : 'none';
+        document.getElementById('edit-ground').checked = isEntrance && !!node?.isGroundLevel;
       }
 
       // === Node operations ===
@@ -575,14 +681,19 @@
         document.getElementById('edit-panel-title').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>編輯節點';
         document.getElementById('edit-id').value = node.id;
         document.getElementById('edit-name').value = node.name;
+        document.getElementById('edit-desc').value = node.desc || '';
+        document.getElementById('edit-hours').value = node.hours || '';
+        document.getElementById('edit-aliases').value = (node.aliases || []).join(', ');
+        document.getElementById('edit-keywords').value = (node.keywords || []).join(', ');
         document.getElementById('edit-type').value = node.type;
-        document.getElementById('edit-floors').value = node.floors.sort((a, b) => a - b).join(', ');
+        document.getElementById('edit-floors').value = getNodeBuildingFloors(node).join(', ');
+        document.getElementById('edit-real-floors').value = getNodeRealFloors(node).join(', ');
         document.getElementById('edit-lat').value = node.coordinates[0];
         document.getElementById('edit-lng').value = node.coordinates[1];
         document.getElementById('edit-poi').checked = node.isPOI;
 
-        document.getElementById('ground-level-section').style.display = '';
-        document.getElementById('edit-ground').checked = !!node.isGroundLevel;
+        refreshGroundLevelUI(node);
+        document.getElementById('edit-outdoor').checked = !!node.isOutdoor;
 
         renderBuildingSelectInPanel(node.building || '');
 
@@ -600,10 +711,30 @@
       function updateField(field, value) {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (node) {
-          node[field] = value;
+          if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed) node[field] = trimmed;
+            else delete node[field];
+          } else {
+            node[field] = value;
+          }
+          if (field === 'type') {
+            if (value !== 'entrance') delete node.isGroundLevel;
+            refreshGroundLevelUI(node);
+          }
           if (field === 'isGroundLevel' && !value) delete node.isGroundLevel;
+          if (field === 'isOutdoor' && !value) delete node.isOutdoor;
           renderAll();
         }
+      }
+
+      function updateListField(field, value) {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (!node) return;
+        const parsed = parseTextList(value);
+        if (parsed.length) node[field] = parsed;
+        else delete node[field];
+        renderAll();
       }
 
       function updateCoord() {
@@ -628,10 +759,445 @@
       function updateFloorsField(val) {
         const node = nodes.find(n => n.id === selectedNodeId);
         if (!node) return;
-        const parsed = [...new Set(val.split(',').map(s => parseInt(s.trim())).filter(f => !isNaN(f)))].sort((a, b) => a - b);
-        if (parsed.length > 0) {
-          node.floors = parsed;
-          renderAll();
+        setNodeBuildingFloors(node, parseFloorList(val));
+        renderAll();
+      }
+
+      function updateRealFloorsField(val) {
+        const node = nodes.find(n => n.id === selectedNodeId);
+        if (!node) return;
+        setNodeRealFloors(node, parseFloorList(val));
+        renderAll();
+      }
+
+      function parseTextList(value) {
+        return [...new Set(String(value || '')
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean))];
+      }
+
+      function parseFloorList(value) {
+        return [...new Set(String(value || '')
+          .split(',')
+          .map(item => item.trim().replace(/f$/i, ''))
+          .map(item => Number(item))
+          .filter(Number.isFinite)
+          .filter(value => Number.isInteger(value)))].sort((a, b) => a - b);
+      }
+
+      function parseFloorMapText(value) {
+        return String(value || '')
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean)
+          .map(item => item.split('=').map(part => part.trim()))
+          .filter(parts => parts.length === 2)
+          .map(([buildingFloor, realFloor]) => ({
+            buildingFloor: Number(buildingFloor),
+            realFloor: Number(realFloor),
+          }))
+          .filter(entry => Number.isInteger(entry.buildingFloor) && Number.isInteger(entry.realFloor))
+          .sort((a, b) => a.buildingFloor - b.buildingFloor);
+      }
+
+      function formatFloorMapText(floorMap) {
+        return (floorMap || []).map(entry => `${entry.buildingFloor}=${entry.realFloor}`).join(', ');
+      }
+
+      function getBuildingFirstFloorRealFloorValue(floorMap = []) {
+        const firstFloorEntry = floorMap.find(entry => Number(entry.buildingFloor) === 1);
+        if (firstFloorEntry) return Number(firstFloorEntry.realFloor);
+        const fallbackEntry = [...floorMap]
+          .map(entry => ({
+            buildingFloor: Number(entry.buildingFloor),
+            realFloor: Number(entry.realFloor),
+          }))
+          .filter(entry => Number.isInteger(entry.buildingFloor) && Number.isInteger(entry.realFloor))
+          .sort((a, b) => a.buildingFloor - b.buildingFloor)[0];
+        return fallbackEntry ? fallbackEntry.realFloor - (fallbackEntry.buildingFloor - 1) : 1;
+      }
+
+      function getReferencedBuildingFloors(buildingId) {
+        const floors = new Set();
+        getBuildingFloorMap(buildingId).forEach(entry => {
+          if (Number.isInteger(Number(entry.buildingFloor))) floors.add(Number(entry.buildingFloor));
+        });
+        nodes
+          .filter(node => node.building === buildingId && !node.isOutdoor)
+          .forEach(node => getNodeBuildingFloors(node).forEach(floor => floors.add(floor)));
+        paths
+          .filter(path => path.building === buildingId && !path.isOutdoor)
+          .forEach(path => getPathBuildingFloors(path).forEach(floor => floors.add(floor)));
+        if (!floors.size) floors.add(1);
+        return [...floors].sort((a, b) => a - b);
+      }
+
+      function buildSequentialFloorMap(buildingId, firstFloorRealFloor) {
+        const baseFloor = Number(firstFloorRealFloor);
+        if (!Number.isInteger(baseFloor)) return [];
+        return getReferencedBuildingFloors(buildingId).map(buildingFloor => ({
+          buildingFloor,
+          realFloor: baseFloor + (buildingFloor - 1),
+        }));
+      }
+
+      function getBuildingFirstFloorRealFloor(buildingId) {
+        return getBuildingFirstFloorRealFloorValue(getBuildingFloorMap(buildingId));
+      }
+
+      function getBuildingFirstFloorRealFloorInputValue(buildingId) {
+        return getBuildingFloorMap(buildingId).length ? getBuildingFirstFloorRealFloor(buildingId) : '';
+      }
+
+      function formatSequentialFloorMapPreview(buildingId, firstFloorRealFloor = getBuildingFirstFloorRealFloor(buildingId)) {
+        const preview = buildSequentialFloorMap(buildingId, firstFloorRealFloor);
+        if (!preview.length) return '尚未建立樓層對照';
+        const previewText = preview.slice(0, 6)
+          .map(entry => `${entry.buildingFloor}F→${entry.realFloor}`)
+          .join('、');
+        return preview.length > 6 ? `${previewText}...` : previewText;
+      }
+
+      function getBuildingFloorMap(buildingId) {
+        return buildings.find(building => building.id === buildingId)?.floorMap || [];
+      }
+
+      function mapBuildingFloorToRealFloor(buildingId, buildingFloor) {
+        const entry = getBuildingFloorMap(buildingId).find(item => Number(item.buildingFloor) === Number(buildingFloor));
+        if (entry) return Number(entry.realFloor);
+        const anchor = getBuildingFirstFloorRealFloor(buildingId);
+        return Number.isInteger(anchor) ? anchor + (Number(buildingFloor) - 1) : Number(buildingFloor);
+      }
+
+      function getNodeBuildingFloors(node) {
+        if (Array.isArray(node?.buildingFloors) && node.buildingFloors.length) return [...node.buildingFloors].sort((a, b) => a - b);
+        if (Array.isArray(node?.floors) && node.floors.length && node.building && !node.isOutdoor) return [...node.floors].sort((a, b) => a - b);
+        if (Number.isInteger(node?.floor) && node.building && !node.isOutdoor) return [node.floor];
+        return [];
+      }
+
+      function getNodeRealFloors(node) {
+        if (Array.isArray(node?.realFloors) && node.realFloors.length) return [...node.realFloors].sort((a, b) => a - b);
+        const buildingFloors = getNodeBuildingFloors(node);
+        if (buildingFloors.length && node.building) return buildingFloors.map(floor => mapBuildingFloorToRealFloor(node.building, floor));
+        if (Array.isArray(node?.floors) && node.floors.length) return [...node.floors].sort((a, b) => a - b);
+        if (Number.isInteger(node?.floor)) return [node.floor];
+        return [1];
+      }
+
+      function getNodeDisplayFloors(node) {
+        return getNodeBuildingFloors(node).length ? getNodeBuildingFloors(node) : getNodeRealFloors(node);
+      }
+
+      function setNodeBuildingFloors(node, floors) {
+        if (!node) return;
+        if (floors.length) node.buildingFloors = floors;
+        else delete node.buildingFloors;
+        delete node.floors;
+      }
+
+      function setNodeRealFloors(node, floors) {
+        if (!node) return;
+        if (floors.length) node.realFloors = floors;
+        else delete node.realFloors;
+      }
+
+      function getPathBuildingFloors(path) {
+        if (Array.isArray(path?.buildingFloors) && path.buildingFloors.length) return [...path.buildingFloors].sort((a, b) => a - b);
+        if (Array.isArray(path?.floors) && path.floors.length && path.building && !path.isOutdoor) return [...path.floors].sort((a, b) => a - b);
+        return [];
+      }
+
+      function getPathRealFloors(path) {
+        if (Array.isArray(path?.realFloors) && path.realFloors.length) return [...path.realFloors].sort((a, b) => a - b);
+        return [];
+      }
+
+      function getPathDisplayFloors(path) {
+        return getPathBuildingFloors(path).length ? getPathBuildingFloors(path) : getPathRealFloors(path);
+      }
+
+      function setPathDisplayFloors(path, floors) {
+        if (!path) return;
+        const useRealFloors = path.isOutdoor || path.pathType === 'ramp';
+        if (useRealFloors) {
+          if (floors.length) path.realFloors = floors;
+          else delete path.realFloors;
+          delete path.buildingFloors;
+        } else {
+          if (floors.length) path.buildingFloors = floors;
+          else delete path.buildingFloors;
+          delete path.realFloors;
+        }
+        delete path.floors;
+      }
+
+      function flashHint(message, duration = 2600) {
+        const hint = document.getElementById('hint');
+        hint.textContent = message;
+        hint.style.opacity = '1';
+        window.clearTimeout(flashHint._timer);
+        flashHint._timer = window.setTimeout(() => {
+          hint.style.opacity = '0';
+        }, duration);
+      }
+
+      function updateDatasetSummary() {
+        const poiCount = nodes.filter(n => n.isPOI).length;
+        const outdoorCount = nodes.filter(n => n.isOutdoor).length;
+        const html = [
+          `<span class="summary-chip"><i class="fa-solid fa-building"></i>${buildings.length} 棟建築</span>`,
+          `<span class="summary-chip"><i class="fa-solid fa-location-dot"></i>${nodes.length} 個節點</span>`,
+          `<span class="summary-chip"><i class="fa-solid fa-route"></i>${paths.length} 條路徑</span>`,
+          `<span class="summary-chip"><i class="fa-solid fa-map-pin"></i>${poiCount} 個 POI</span>`,
+          `<span class="summary-chip"><i class="fa-solid fa-cloud-sun"></i>${outdoorCount} 個室外節點</span>`
+        ];
+        document.getElementById('dataset-summary').innerHTML = html.join('');
+      }
+
+      function normalizeDataShape(data) {
+        const safeData = data || {};
+        const normalizedBuildings = (safeData.buildings || []).map((building, index) => ({
+          id: String(building.id || `building_${index + 1}`).trim(),
+          name: String(building.name || `建築 ${index + 1}`).trim(),
+          ...(Array.isArray(building.floorMap) && building.floorMap.length
+            ? {
+                floorMap: building.floorMap
+                  .map(entry => ({
+                    buildingFloor: Number(entry.buildingFloor),
+                    realFloor: Number(entry.realFloor),
+                  }))
+                  .filter(entry => Number.isInteger(entry.buildingFloor) && Number.isInteger(entry.realFloor))
+                  .sort((a, b) => a.buildingFloor - b.buildingFloor)
+              }
+            : {}),
+          ...(Array.isArray(building.bounds) && building.bounds.length
+            ? {
+                bounds: building.bounds
+                  .map(point => [Number(point[0]), Number(point[1])])
+                  .filter(point => Number.isFinite(point[0]) && Number.isFinite(point[1]))
+              }
+            : {})
+        }));
+
+        const normalizedNodes = (safeData.nodes || []).map((node, index) => {
+          const buildingFloors = [...new Set(((node.buildingFloors || (node.building && !node.isOutdoor ? (node.floors || [node.floor ?? 1]) : [])) || [])
+            .map(floor => Number(floor))
+            .filter(floor => Number.isInteger(floor)))].sort((a, b) => a - b);
+          const realFloors = [...new Set(((node.realFloors || (!node.building || node.isOutdoor ? (node.floors || [node.floor ?? 1]) : [])) || [])
+            .map(floor => Number(floor))
+            .filter(floor => Number.isInteger(floor)))].sort((a, b) => a - b);
+          const nextNode = {
+            id: String(node.id || `node_${index + 1}`).trim(),
+            name: String(node.name || `未命名節點 ${index + 1}`).trim(),
+            type: String(node.type || 'entrance').trim(),
+            coordinates: [Number(node.coordinates?.[0]), Number(node.coordinates?.[1])],
+            isPOI: !!node.isPOI,
+          };
+          if (node.building) nextNode.building = String(node.building).trim();
+          if (buildingFloors.length) nextNode.buildingFloors = buildingFloors;
+          if (realFloors.length) nextNode.realFloors = realFloors;
+          if (node.isGroundLevel) nextNode.isGroundLevel = true;
+          if (node.isOutdoor) nextNode.isOutdoor = true;
+          if (node.desc) nextNode.desc = String(node.desc).trim();
+          if (node.hours) nextNode.hours = String(node.hours).trim();
+          const aliases = Array.isArray(node.aliases) ? node.aliases : parseTextList(node.aliases);
+          const keywords = Array.isArray(node.keywords) ? node.keywords : parseTextList(node.keywords);
+          if (aliases.length) nextNode.aliases = aliases.map(item => String(item).trim()).filter(Boolean);
+          if (keywords.length) nextNode.keywords = keywords.map(item => String(item).trim()).filter(Boolean);
+          return nextNode;
+        });
+
+        const normalizedPaths = (safeData.paths || []).map((path, index) => {
+          const nextPath = {
+            id: String(path.id || `path_${index + 1}`).trim(),
+            points: (path.points || [])
+              .map(point => [Number(point[0]), Number(point[1])])
+              .filter(point => Number.isFinite(point[0]) && Number.isFinite(point[1])),
+            segments: (path.segments || [])
+              .map(segment => [Number(segment[0]), Number(segment[1])])
+              .filter(segment => Number.isInteger(segment[0]) && Number.isInteger(segment[1]))
+          };
+          const buildingFloors = [...new Set(((path.buildingFloors || (path.building && !path.isOutdoor ? (path.floors || []) : [])) || [])
+            .map(floor => Number(floor))
+            .filter(floor => Number.isInteger(floor)))].sort((a, b) => a - b);
+          const realFloors = [...new Set(((path.realFloors || (path.isOutdoor ? (path.floors || []) : [])) || [])
+            .map(floor => Number(floor))
+            .filter(floor => Number.isInteger(floor)))].sort((a, b) => a - b);
+          if (buildingFloors.length) nextPath.buildingFloors = buildingFloors;
+          if (realFloors.length) nextPath.realFloors = realFloors;
+          if (path.building) nextPath.building = String(path.building).trim();
+          if (path.isOutdoor) nextPath.isOutdoor = true;
+          if (path.pathType) nextPath.pathType = String(path.pathType).trim();
+          return nextPath;
+        });
+
+        return { buildings: normalizedBuildings, nodes: normalizedNodes, paths: normalizedPaths };
+      }
+
+      function setEditorData(data) {
+        const normalized = normalizeDataShape(data);
+        buildings = normalized.buildings;
+        nodes = normalized.nodes;
+        paths = normalized.paths;
+        selectedNodeId = null;
+        selectedPathId = null;
+        fileHandle = null;
+        closeEditPanel();
+        autoAssignBuildingToNodes();
+        renderBuildingsOnMap();
+        renderAll();
+      }
+
+      function validateDataset(data = { buildings, nodes, paths }) {
+        const issues = [];
+        const normalized = normalizeDataShape(data);
+        const buildingIds = new Set();
+        const nodeIds = new Set();
+        const pathIds = new Set();
+        const knownBuildings = new Set(normalized.buildings.map(building => building.id));
+
+        normalized.buildings.forEach(building => {
+          if (buildingIds.has(building.id)) {
+            issues.push({ severity: 'error', title: '重複建築 ID', detail: `${building.id} 重複出現，前台會無法穩定對應建築。` });
+          }
+          buildingIds.add(building.id);
+          if (building.bounds && building.bounds.length > 0 && building.bounds.length < 3) {
+            issues.push({ severity: 'warning', title: '建築邊界不足', detail: `${building.name} 的 bounds 少於 3 個點，無法構成有效多邊形。` });
+          }
+          if (building.floorMap && building.floorMap.length === 0) {
+            issues.push({ severity: 'warning', title: '建築缺少樓層對照', detail: `${building.name} 尚未設定 floorMap，跨建築真實樓層會退回使用建築樓層。` });
+          }
+        });
+
+        normalized.nodes.forEach(node => {
+          const nodeBuildingFloors = getNodeBuildingFloors(node);
+          const nodeRealFloors = getNodeRealFloors(node);
+          if (nodeIds.has(node.id)) {
+            issues.push({ severity: 'error', title: '重複節點 ID', detail: `${node.id} 重複出現，路徑規劃會錯亂。` });
+          }
+          nodeIds.add(node.id);
+          if (!Number.isFinite(node.coordinates[0]) || !Number.isFinite(node.coordinates[1])) {
+            issues.push({ severity: 'error', title: '節點座標無效', detail: `${node.name} (${node.id}) 缺少有效 coordinates。` });
+          }
+          if (!nodeBuildingFloors.length && !nodeRealFloors.length) {
+            issues.push({ severity: 'error', title: '節點缺少樓層', detail: `${node.name} (${node.id}) 沒有可用 buildingFloors 或 realFloors。` });
+          }
+          if (node.building && !knownBuildings.has(node.building)) {
+            issues.push({ severity: 'error', title: '節點建築不存在', detail: `${node.name} (${node.id}) 指向不存在的建築 ${node.building}。` });
+          }
+          if (!node.isOutdoor && !node.building) {
+            issues.push({ severity: 'warning', title: '室內節點未指定建築', detail: `${node.name} (${node.id}) 不是室外節點，但也沒有 building。` });
+          }
+          if ((nodeBuildingFloors.length > 1 || nodeRealFloors.length > 1) && !['elevator', 'staircase', 'wc'].includes(node.type)) {
+            issues.push({ severity: 'warning', title: '多樓層節點型別可疑', detail: `${node.name} (${node.id}) 橫跨多樓層，但型別不像常見的垂直重複設施。` });
+          }
+        });
+
+        normalized.paths.forEach(path => {
+          if (pathIds.has(path.id)) {
+            issues.push({ severity: 'error', title: '重複路徑 ID', detail: `${path.id} 重複出現，路徑資料可能被覆蓋。` });
+          }
+          pathIds.add(path.id);
+          if (path.points.length < 2) {
+            issues.push({ severity: 'error', title: '路徑點數不足', detail: `${path.id} 至少需要 2 個 points。` });
+          }
+          if (!path.segments.length) {
+            issues.push({ severity: 'warning', title: '路徑沒有線段', detail: `${path.id} 沒有 segments，前台無法使用。` });
+          }
+          if (path.building && !knownBuildings.has(path.building)) {
+            issues.push({ severity: 'error', title: '路徑建築不存在', detail: `${path.id} 指向不存在的建築 ${path.building}。` });
+          }
+          path.segments.forEach((segment, index) => {
+            const [fromIndex, toIndex] = segment;
+            if (!path.points[fromIndex] || !path.points[toIndex]) {
+              issues.push({ severity: 'error', title: '路徑 segment 索引無效', detail: `${path.id} 的 segment #${index + 1} 指到不存在的 point。` });
+            }
+          });
+          if (!path.isOutdoor && !path.building) {
+            issues.push({ severity: 'warning', title: '室內路徑未指定建築', detail: `${path.id} 不是室外路徑，但也沒有 building。` });
+          }
+        });
+
+        if (normalized.nodes.length === 0) {
+          issues.push({ severity: 'warning', title: '沒有節點資料', detail: '目前資料集沒有任何 nodes。' });
+        }
+        if (normalized.paths.length === 0) {
+          issues.push({ severity: 'warning', title: '沒有路徑資料', detail: '目前資料集沒有任何 paths。' });
+        }
+
+        return {
+          stats: {
+            buildings: normalized.buildings.length,
+            nodes: normalized.nodes.length,
+            paths: normalized.paths.length,
+            pois: normalized.nodes.filter(node => node.isPOI).length,
+          },
+          counts: {
+            errors: issues.filter(issue => issue.severity === 'error').length,
+            warnings: issues.filter(issue => issue.severity === 'warning').length,
+            infos: issues.filter(issue => issue.severity === 'info').length,
+          },
+          issues,
+        };
+      }
+
+      function renderValidationReport(report) {
+        const summary = document.getElementById('validation-summary');
+        const stats = document.getElementById('validation-stats');
+        const issues = document.getElementById('validation-issues');
+        summary.innerHTML = [
+          `<div class="bg-red-50 border border-red-100 rounded-xl p-3"><div class="text-[11px] font-bold text-red-500 uppercase tracking-wider mb-1">Errors</div><div class="text-2xl font-black text-red-700">${report.counts.errors}</div></div>`,
+          `<div class="bg-amber-50 border border-amber-100 rounded-xl p-3"><div class="text-[11px] font-bold text-amber-500 uppercase tracking-wider mb-1">Warnings</div><div class="text-2xl font-black text-amber-700">${report.counts.warnings}</div></div>`,
+          `<div class="bg-blue-50 border border-blue-100 rounded-xl p-3"><div class="text-[11px] font-bold text-blue-500 uppercase tracking-wider mb-1">Infos</div><div class="text-2xl font-black text-blue-700">${report.counts.infos}</div></div>`
+        ].join('');
+        stats.innerHTML = `建築 ${report.stats.buildings} 棟，節點 ${report.stats.nodes} 個，路徑 ${report.stats.paths} 條，POI ${report.stats.pois} 個`;
+        issues.innerHTML = report.issues.length
+          ? report.issues.map(issue => `
+              <div class="bg-white border border-slate-200 rounded-xl p-3">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="issue-pill ${issue.severity}">${issue.severity.toUpperCase()}</span>
+                  <span class="text-sm font-bold text-slate-800">${issue.title}</span>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed">${issue.detail}</p>
+              </div>
+            `).join('')
+          : '<div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-sm text-emerald-700 font-medium">未發現結構性問題，目前資料格式可供前台與編輯器使用。</div>';
+      }
+
+      function openValidation() {
+        document.getElementById('validation-overlay').classList.add('active');
+      }
+
+      function closeValidation() {
+        document.getElementById('validation-overlay').classList.remove('active');
+      }
+
+      function runValidation(openModal = false) {
+        lastValidationReport = validateDataset();
+        renderValidationReport(lastValidationReport);
+        if (openModal) openValidation();
+        flashHint(`驗證完成：${lastValidationReport.counts.errors} 錯誤，${lastValidationReport.counts.warnings} 警告`);
+      }
+
+      function openImportFile() {
+        document.getElementById('import-file-input').click();
+      }
+
+      async function handleImportFile(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          setEditorData(parsed);
+          runValidation(false);
+          flashHint(`已匯入 ${file.name}`);
+        } catch (error) {
+          alert(`匯入失敗：${error.message}`);
+        } finally {
+          event.target.value = '';
         }
       }
 
@@ -645,7 +1211,7 @@
         document.getElementById('bd-name').value = '';
 
         // 動態生成樓層按鈕
-        const allFloors = [...new Set(nodes.flatMap(n => n.floors))].sort((a, b) => a - b);
+        const allFloors = [...new Set(nodes.flatMap(n => getNodeDisplayFloors(n)))].sort((a, b) => a - b);
         document.getElementById('bd-floors').innerHTML = allFloors.map(f =>
           `<button onclick="toggleBdFloor(${f})" data-floor="${f}" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-gray-200 bg-white text-gray-600 hover:border-blue-400 transition-all">${f}F</button>`
         ).join('');
@@ -697,7 +1263,7 @@
         return nodes.filter(n => {
           // 樓層條件 (AND): 節點的 floors 必須包含所有選中的樓層之一
           if (bdSelectedFloors.size > 0) {
-            if (!n.floors.some(f => bdSelectedFloors.has(f))) return false;
+            if (!getNodeDisplayFloors(n).some(f => bdSelectedFloors.has(f))) return false;
           }
           // 類型條件 (AND)
           if (bdSelectedTypes.size > 0) {
@@ -728,7 +1294,7 @@
               <i class="fa-solid ${typeIcons[n.type] || 'fa-location-dot'} text-gray-400 text-[11px]"></i>
               <span class="truncate text-gray-700">${n.name}</span>
             </div>
-            <span class="text-[10px] font-bold text-gray-400 shrink-0 ml-2">${n.floors.sort().join(',')}F</span>
+            <span class="text-[10px] font-bold text-gray-400 shrink-0 ml-2">${getNodeDisplayFloors(n).join(',')}F</span>
           </div>`
         ).join('') + (matched.length > 50 ? `<p class="text-center text-gray-400 py-1">...以及其餘 ${matched.length - 50} 個節點</p>` : '');
       }
@@ -766,12 +1332,18 @@
           id,
           name: '新節點',
           type: 'entrance',
-          floors: [floor],
+          buildingFloors: [floor],
           coordinates: [parseFloat(center.lat.toFixed(6)), parseFloat(center.lng.toFixed(6))],
           isPOI: false,
         };
         const detectedBuilding = getNodeBuilding(node.coordinates);
-        if (detectedBuilding) node.building = detectedBuilding;
+        if (detectedBuilding) {
+          node.building = detectedBuilding;
+        } else {
+          delete node.buildingFloors;
+          node.realFloors = [floor];
+          node.isOutdoor = true;
+        }
         nodes.push(node);
         selectNode(id);
       }
@@ -858,36 +1430,63 @@
           return;
         }
         list.innerHTML = buildings.map(b => `
-          <div class="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-xl">
-            <div class="min-w-0 flex-1">
+          <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0 flex-1">
               <div class="text-sm font-bold text-gray-800">${b.name}</div>
               <div class="text-[10px] font-mono text-gray-400">${b.id}</div>
               ${b.bounds && b.bounds.length >= 3 ? `<div class="text-[10px] text-blue-500 mt-0.5"><i class="fa-solid fa-draw-polygon mr-0.5"></i>${b.bounds.length} 個頂點</div>` : '<div class="text-[10px] text-amber-500">尚未設定範圍</div>'}
+              </div>
+              <div class="flex gap-1 ml-2 shrink-0">
+                <button onclick="startPolygonEdit('${b.id}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 text-xs" title="編輯多邊形">
+                  <i class="fa-solid fa-draw-polygon"></i>
+                </button>
+                <button onclick="deleteBuilding('${b.id}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 text-xs" title="刪除">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
             </div>
-            <div class="flex gap-1 ml-2 shrink-0">
-              <button onclick="startPolygonEdit('${b.id}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-blue-500 hover:bg-blue-50 text-xs" title="編輯多邊形">
-                <i class="fa-solid fa-draw-polygon"></i>
-              </button>
-              <button onclick="deleteBuilding('${b.id}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 text-xs" title="刪除">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 block">1F 對應真實樓層</label>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-slate-700">1F =</span>
+                <input type="number" step="1" value="${getBuildingFirstFloorRealFloorInputValue(b.id)}" onchange="updateBuildingFirstFloorRealFloor('${b.id}', this.value)" class="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none bg-white" />
+                <span class="text-sm text-slate-500">真實樓層</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">自動推算：${formatSequentialFloorMapPreview(b.id)}</p>
             </div>
           </div>
         `).join('');
       }
 
+      function updateBuildingFirstFloorRealFloor(id, value) {
+        const building = buildings.find(item => item.id === id);
+        if (!building) return;
+        const normalizedValue = String(value || '').trim();
+        const parsedValue = Number(normalizedValue);
+        if (Number.isInteger(parsedValue)) building.floorMap = buildSequentialFloorMap(id, parsedValue);
+        else delete building.floorMap;
+        renderBuildingList();
+      }
+
       function addBuilding() {
         const name = document.getElementById('bm-new-name').value.trim();
         const id = document.getElementById('bm-new-id').value.trim();
+        const firstFloorRealFloorRaw = document.getElementById('bm-new-real-floor-1').value.trim();
+        const firstFloorRealFloor = Number(firstFloorRealFloorRaw);
         if (!name) { alert('請輸入建築名稱'); return; }
         if (!id) { alert('請輸入建築 ID'); return; }
         if (!/^[a-zA-Z0-9_-]+$/.test(id)) { alert('建築 ID 只能包含英數字、底線、連字號'); return; }
         if (buildings.some(b => b.id === id)) { alert('此 ID 已存在'); return; }
         const bounds = window._pendingBounds || null;
-        buildings.push({ id, name, ...(bounds ? { bounds } : {}) });
+        const floorMap = Number.isInteger(firstFloorRealFloor)
+          ? [{ buildingFloor: 1, realFloor: firstFloorRealFloor }]
+          : [];
+        buildings.push({ id, name, ...(floorMap.length ? { floorMap } : {}), ...(bounds ? { bounds } : {}) });
         window._pendingBounds = null;
         document.getElementById('bm-new-name').value = '';
         document.getElementById('bm-new-id').value = '';
+        document.getElementById('bm-new-real-floor-1').value = '';
         document.getElementById('bm-bounds-label').textContent = '在地圖上繪製邊界多邊形';
         autoAssignBuildingToNodes();
         renderBuildingsOnMap();
@@ -1024,18 +1623,23 @@
       function renderPaths() {
         pathLayers.forEach(l => map.removeLayer(l));
         pathLayers = [];
-        if (pathEditMode || drawingPath) return; // don't render while editing/drawing
+        // 繪製新路徑或編輯路徑時，仍保留其他路徑的顯示
 
         paths.forEach(p => {
+          // 正在編輯的路徑由 renderPathEditMode 自行繪製，跳過
+          if (pathEditMode && p.id === selectedPathId) return;
           (p.segments || []).forEach(seg => {
             const p0 = p.points[seg[0]];
             const p1 = p.points[seg[1]];
             if (!p0 || !p1) return;
             const isSelected = p.id === selectedPathId;
+            const color = isSelected ? '#f59e0b' : (p.isOutdoor ? '#10b981' : '#64748b'); // Green for outdoor
+            const dashArray = p.isOutdoor ? '10, 10' : null;
             const line = L.polyline([p0, p1], {
-              color: isSelected ? '#f59e0b' : '#64748b',
-              weight: isSelected ? 5 : 4,
+              color: color,
+              weight: 15,
               opacity: isSelected ? 0.9 : 0.5,
+              dashArray: dashArray,
             }).addTo(map);
             line.on('click', function(ev) {
               L.DomEvent.stopPropagation(ev);
@@ -1057,8 +1661,19 @@
         panel.classList.add('show');
         // Switch to path panel
         document.getElementById('edit-panel-content').style.display = 'none';
-        document.getElementById('path-edit-content').style.display = '';
+        document.getElementById('path-edit-content').style.display = 'block';
         document.getElementById('edit-panel-title').innerHTML = '<i class="fa-solid fa-route text-amber-500 mr-2"></i>編輯路徑';
+        const useRealFloors = path.isOutdoor || path.pathType === 'ramp';
+        const allFloors = [...new Set(nodes.flatMap(n => useRealFloors ? getNodeRealFloors(n) : getNodeDisplayFloors(n)))].sort((a, b) => a - b);
+        const pathFloors = getPathDisplayFloors(path);
+        const floorsHTML = allFloors.map(f => {
+          const checked = pathFloors.includes(f) ? 'checked' : '';
+          return `<label class="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" value="${f}" ${checked} onchange="togglePathFloor(${f})" class="accent-amber-500 w-3.5 h-3.5">
+            <span class="text-sm text-gray-700 font-medium">${f}F</span>
+          </label>`;
+        }).join('');
+
         document.getElementById('path-edit-content').innerHTML = `
           <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">路徑資訊</h3>
@@ -1073,11 +1688,52 @@
                 ${buildings.map(b => `<option value="${b.id}" ${b.id === path.building ? 'selected' : ''}>${b.name}</option>`).join('')}
               </select>
             </div>
+            <div>
+              <label class="text-xs text-gray-600 mb-1 block">路徑型態</label>
+              <select onchange="updatePathType(this.value)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <option value="walk" ${!path.pathType || path.pathType === 'walk' ? 'selected' : ''}>一般路徑</option>
+                <option value="ramp" ${path.pathType === 'ramp' ? 'selected' : ''}>斜坡</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">${useRealFloors ? '真實樓層' : '建築樓層'}</h3>
+            <p class="text-[11px] text-gray-400">${useRealFloors ? '室外或斜坡路徑使用真實樓層。' : '室內路徑使用建築樓層；未勾選時套用到建築內所有可用樓層。'}</p>
+            <div id="path-floor-checkboxes" class="flex flex-wrap gap-3">
+              ${allFloors.length > 0 ? floorsHTML : '<span class="text-xs text-gray-400">尚無可用樓層</span>'}
+            </div>
+            <div class="text-xs text-gray-500 mt-1">
+              <i class="fa-solid fa-circle-info mr-1"></i>
+              目前：${pathFloors.length > 0 ? pathFloors.join(', ') + 'F' : '所有樓層（預設）'}
+            </div>
+          </div>
+
+          <!-- 室外屬性 Toggle -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">進階屬性</h3>
+            <label class="flex items-center justify-between cursor-pointer group">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><i class="fa-solid fa-cloud-sun"></i></div>
+                <div>
+                  <div class="text-sm font-medium text-gray-700">設為室外路徑</div>
+                  <div class="text-[11px] text-gray-400">不受限於特定建築內部</div>
+                </div>
+              </div>
+              <div class="relative inline-block w-10 h-5">
+                <input type="checkbox" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer m-0" onchange="togglePathOutdoor(this.checked)" ${path.isOutdoor ? 'checked' : ''}/>
+                <label class="toggle-label block overflow-hidden cursor-pointer"></label>
+              </div>
+            </label>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div class="text-xs text-gray-500">
               <i class="fa-solid fa-circle-info mr-1"></i>
               ${path.points.length} 個頂點，${(path.segments||[]).length} 條線段
             </div>
           </div>
+
           <div class="pt-2">
             <button onclick="enterPathEditMode()" class="w-full py-3 bg-amber-50 border-2 border-amber-200 text-amber-700 rounded-xl text-sm font-medium hover:bg-amber-100 hover:border-amber-300 transition-colors flex items-center justify-center gap-2">
               <i class="fa-solid fa-pen"></i> 編輯路徑形狀
@@ -1102,6 +1758,56 @@
         const path = paths.find(p => p.id === selectedPathId);
         if (!path) return;
         if (value) path.building = value; else delete path.building;
+        selectPath(selectedPathId); // refresh panel
+      }
+
+      function updatePathType(value) {
+        const path = paths.find(p => p.id === selectedPathId);
+        if (!path) return;
+        if (value && value !== 'walk') path.pathType = value;
+        else delete path.pathType;
+        if (value === 'ramp') {
+          path.isOutdoor = true;
+          if (!path.realFloors && path.points.length >= 2) path.realFloors = [1, 2];
+          delete path.buildingFloors;
+        }
+        selectPath(selectedPathId);
+      }
+
+      function togglePathFloor(floor) {
+        const path = paths.find(p => p.id === selectedPathId);
+        if (!path) return;
+        const currentFloors = getPathDisplayFloors(path);
+        const idx = currentFloors.indexOf(floor);
+        if (idx >= 0) {
+          currentFloors.splice(idx, 1);
+        } else {
+          currentFloors.push(floor);
+          currentFloors.sort((a, b) => a - b);
+        }
+        setPathDisplayFloors(path, currentFloors);
+        selectPath(selectedPathId); // refresh panel
+      }
+
+      function togglePathOutdoor(isOutdoor) {
+        const path = paths.find(p => p.id === selectedPathId);
+        if (!path) return;
+        if (isOutdoor) {
+          path.isOutdoor = true;
+          if (!path.realFloors && getPathDisplayFloors(path).length) {
+            path.realFloors = [...getPathDisplayFloors(path)];
+          }
+          delete path.buildingFloors;
+        } else {
+          delete path.isOutdoor;
+          if (!path.pathType || path.pathType === 'walk') {
+            if (!path.buildingFloors && getPathDisplayFloors(path).length) {
+              path.buildingFloors = [...getPathDisplayFloors(path)];
+            }
+            delete path.realFloors;
+          }
+        }
+        selectPath(selectedPathId);
       }
 
       function deletePath() {
@@ -1136,7 +1842,7 @@
         if (drawingPreviewLine) { map.removeLayer(drawingPreviewLine); drawingPreviewLine = null; }
         if (drawingPathPoints.length >= 2) {
           drawingPreviewLine = L.polyline(drawingPathPoints, {
-            color: '#f59e0b', weight: 4, opacity: 0.8,
+            color: '#f59e0b', weight: 15, opacity: 0.8,
           }).addTo(map);
         }
         // Update path bar
@@ -1160,7 +1866,7 @@
             zIndexOffset: 500,
             icon: L.divIcon({
               className: '',
-              html: `<div style="width:10px;height:10px;background:#f59e0b;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);transform:translate(-5px,-5px);cursor:grab"></div>`,
+              html: `<div style="width:18px;height:18px;background:#f59e0b;border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);transform:translate(-9px,-9px);cursor:grab"></div>`,
               iconSize: [0, 0]
             })
           }).addTo(map);
@@ -1232,12 +1938,15 @@
         const path = paths.find(p => p.id === selectedPathId);
         if (!path) return;
 
-        // Clear old
-        pathLayers.forEach(l => map.removeLayer(l));
-        pathLayers = [];
+        // 清除編輯模式專用圖層（不影響其他路徑）
+        editModeLayers.forEach(l => map.removeLayer(l));
+        editModeLayers = [];
         pathEditMarkers.forEach(m => map.removeLayer(m));
         pathEditMarkers = [];
         if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
+
+        // 確保其他路徑仍然可見
+        renderPaths();
 
         // Draw segments as interactive polylines
         (path.segments || []).forEach((seg, segIdx) => {
@@ -1245,10 +1954,11 @@
           const p1 = path.points[seg[1]];
           if (!p0 || !p1) return;
           const line = L.polyline([p0, p1], {
-            color: '#f59e0b', weight: 5, opacity: 0.7,
+            color: '#f59e0b', weight: 15, opacity: 0.7,
           }).addTo(map);
 
-          // Ghost vertex: hover over segment to show insertion point
+          // Ghost vertex: 懸停線段時顯示可插入頂點的預覽圓點
+          // 關鍵：ghost marker 設為 interactive: false，避免攔截 mouse 事件造成閃爍
           line.on('mousemove', function(ev) {
             const proj = projectPointToSegment(
               ev.latlng.lat, ev.latlng.lng,
@@ -1257,26 +1967,29 @@
             if (ghostMarker) map.removeLayer(ghostMarker);
             ghostMarker = L.marker([proj.x, proj.y], {
               icon: L.divIcon({ className: '', html: '<div class="path-ghost-vertex"></div>', iconSize: [0, 0] }),
-              zIndexOffset: 600, interactive: true
+              zIndexOffset: 600, interactive: false  // 不攔截 mouse 事件
             }).addTo(map);
+          });
 
-            // Store segment info for insertion
-            ghostMarker._segIdx = segIdx;
-            ghostMarker._segData = seg;
-            ghostMarker._projCoord = [proj.x, proj.y];
-
-            ghostMarker.on('mousedown', function(gev) {
-              L.DomEvent.stopPropagation(gev);
-              L.DomEvent.preventDefault(gev);
-              insertVertexOnSegment(path, segIdx, [parseFloat(proj.x.toFixed(6)), parseFloat(proj.y.toFixed(6))]);
-            });
+          // 點擊線段 → 在投影位置插入新頂點
+          line.on('click', function(ev) {
+            L.DomEvent.stopPropagation(ev);
+            const proj = projectPointToSegment(
+              ev.latlng.lat, ev.latlng.lng,
+              p0[0], p0[1], p1[0], p1[1]
+            );
+            if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
+            insertVertexOnSegment(path, segIdx, [parseFloat(proj.x.toFixed(6)), parseFloat(proj.y.toFixed(6))]);
           });
 
           line.on('mouseout', function() {
-            if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
+            // 延遲移除 ghost marker，避免快速移動時閃爍
+            setTimeout(() => {
+              if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
+            }, 100);
           });
 
-          pathLayers.push(line);
+          editModeLayers.push(line);
         });
 
         // Draw vertex markers (draggable)
@@ -1288,7 +2001,7 @@
             zIndexOffset: 700,
             icon: L.divIcon({
               className: '',
-              html: `<div style="width:${isBranch?14:10}px;height:${isBranch?14:10}px;background:${isBranch?'#ef4444':'#f59e0b'};border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);transform:translate(-${isBranch?7:5}px,-${isBranch?7:5}px);cursor:grab"></div>`,
+              html: `<div style="width:${isBranch?22:18}px;height:${isBranch?22:18}px;background:${isBranch?'#ef4444':'#f59e0b'};border:2px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);transform:translate(-${isBranch?11:9}px,-${isBranch?11:9}px);cursor:grab"></div>`,
               iconSize: [0, 0]
             })
           }).addTo(map);
@@ -1296,15 +2009,15 @@
           marker.on('drag', (ev) => {
             const ll = ev.target.getLatLng();
             path.points[idx] = [parseFloat(ll.lat.toFixed(6)), parseFloat(ll.lng.toFixed(6))];
-            // Update segment lines in real time
-            pathLayers.forEach(l => map.removeLayer(l));
-            pathLayers = [];
+            // Update segment lines in real time (使用 editModeLayers 避免清除其他路徑)
+            editModeLayers.forEach(l => map.removeLayer(l));
+            editModeLayers = [];
             (path.segments || []).forEach(seg => {
               const a = path.points[seg[0]];
               const b = path.points[seg[1]];
               if (!a || !b) return;
-              const ln = L.polyline([a, b], { color: '#f59e0b', weight: 5, opacity: 0.7 }).addTo(map);
-              pathLayers.push(ln);
+              const ln = L.polyline([a, b], { color: '#f59e0b', weight: 15, opacity: 0.7 }).addTo(map);
+              editModeLayers.push(ln);
             });
           });
 
@@ -1390,6 +2103,8 @@
       function exitPathEditMode() {
         pathEditMode = false;
         branchSourceIdx = null;
+        editModeLayers.forEach(l => map.removeLayer(l));
+        editModeLayers = [];
         pathEditMarkers.forEach(m => map.removeLayer(m));
         pathEditMarkers = [];
         if (ghostMarker) { map.removeLayer(ghostMarker); ghostMarker = null; }
@@ -1429,7 +2144,8 @@
       let fileHandle = null;
 
       async function saveToFile() {
-        const data = JSON.stringify({ buildings, nodes, paths }, null, 2);
+        const normalized = normalizeDataShape({ buildings, nodes, paths });
+        const data = JSON.stringify(normalized, null, 2);
 
         // Try File System Access API first (Chrome/Edge on localhost/HTTPS)
         if (window.showSaveFilePicker) {
@@ -1481,18 +2197,13 @@
       fetch('map_data.json')
         .then(r => r.json())
         .then(data => {
-          buildings = data.buildings || [];
-          // Retrofit single floor property to floors array if necessary
-          nodes = (data.nodes || []).map(n => {
-            if (n.floor !== undefined && !n.floors) {
-               n.floors = [n.floor];
-               delete n.floor;
-            }
-            return n;
-          });
-          paths = data.paths || [];
+          const normalized = normalizeDataShape(data);
+          buildings = normalized.buildings;
+          nodes = normalized.nodes;
+          paths = normalized.paths;
           renderBuildingsOnMap();
           renderAll();
+          runValidation(false);
         })
         .catch(() => renderAll());
     </script>

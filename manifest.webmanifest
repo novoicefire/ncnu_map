@@ -1,0 +1,24 @@
+{
+  "name": "NCNU 校園生活導航",
+  "short_name": "NCNU 導航",
+  "description": "提供校園生活探索、跨樓層導航、路線選擇與地點搜尋的離線友善校園導航系統。",
+  "start_url": "./demo.html",
+  "display": "standalone",
+  "background_color": "#f5f3ed",
+  "theme_color": "#708191",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "./icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

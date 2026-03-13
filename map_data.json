@@ -3,6 +3,32 @@
     {
       "id": "mgmt",
       "name": "管理學院",
+      "floorMap": [
+        {
+          "buildingFloor": -1,
+          "realFloor": -1
+        },
+        {
+          "buildingFloor": 1,
+          "realFloor": 1
+        },
+        {
+          "buildingFloor": 2,
+          "realFloor": 2
+        },
+        {
+          "buildingFloor": 3,
+          "realFloor": 3
+        },
+        {
+          "buildingFloor": 4,
+          "realFloor": 4
+        },
+        {
+          "buildingFloor": 5,
+          "realFloor": 5
+        }
+      ],
       "bounds": [
         [
           23.951876,
@@ -21,6 +47,70 @@
           120.928332
         ]
       ]
+    },
+    {
+      "id": "AB",
+      "name": "行政大樓",
+      "floorMap": [
+        {
+          "buildingFloor": -3,
+          "realFloor": -7
+        },
+        {
+          "buildingFloor": 1,
+          "realFloor": -3
+        }
+      ],
+      "bounds": [
+        [
+          23.95156,
+          120.930591
+        ],
+        [
+          23.951523,
+          120.930985
+        ],
+        [
+          23.950739,
+          120.930883
+        ],
+        [
+          23.950785,
+          120.930481
+        ]
+      ]
+    },
+    {
+      "id": "lib",
+      "name": "圖書館",
+      "floorMap": [
+        {
+          "buildingFloor": 1,
+          "realFloor": 2
+        },
+        {
+          "buildingFloor": 2,
+          "realFloor": 3
+        }
+      ],
+      "bounds": [
+        [
+          23.952229,
+          120.925806
+        ],
+        [
+          23.952151,
+          120.926495
+        ],
+        [
+          23.951155,
+          120.926372
+        ],
+        [
+          23.951222,
+          120.925669
+        ]
+      ]
     }
   ],
   "nodes": [
@@ -28,43 +118,43 @@
       "id": "node_1_in",
       "name": "管院二樓大門",
       "type": "entrance",
-      "building": "mgmt",
       "coordinates": [
-        23.952316,
-        120.927182
+        23.952338,
+        120.92719
       ],
       "isPOI": true,
-      "isGroundLevel": true,
-      "floors": [
+      "building": "mgmt",
+      "buildingFloors": [
         2
-      ]
+      ],
+      "isGroundLevel": true
     },
     {
       "id": "node_1_hall",
       "name": "管院一樓大門",
       "type": "entrance",
-      "building": "mgmt",
       "coordinates": [
-        23.951887,
-        120.927721
+        23.951879,
+        120.92771
       ],
       "isPOI": true,
-      "isGroundLevel": true,
-      "floors": [
+      "building": "mgmt",
+      "buildingFloors": [
         1
-      ]
+      ],
+      "isGroundLevel": true
     },
     {
       "id": "node_1_wc",
-      "name": "廁所",
+      "name": "洗手間",
       "type": "wc",
-      "building": "mgmt",
       "coordinates": [
         23.951924,
         120.92723
       ],
       "isPOI": true,
-      "floors": [
+      "building": "mgmt",
+      "buildingFloors": [
         2,
         3,
         4,
@@ -73,15 +163,15 @@
     },
     {
       "id": "node_1_elev",
-      "name": "管院電梯 1~5F",
+      "name": "電梯",
       "type": "elevator",
-      "building": "mgmt",
       "coordinates": [
-        23.951879,
-        120.927794
+        23.95188,
+        120.927807
       ],
-      "isPOI": false,
-      "floors": [
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
         -1,
         1,
         2,
@@ -92,15 +182,15 @@
     },
     {
       "id": "node_2_elev",
-      "name": "管院電梯 2~5F",
+      "name": "電梯",
       "type": "elevator",
-      "building": "mgmt",
       "coordinates": [
-        23.952343,
-        120.927229
+        23.952371,
+        120.927231
       ],
-      "isPOI": false,
-      "floors": [
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
         2,
         3,
         4,
@@ -109,54 +199,411 @@
     },
     {
       "id": "node_1773115986493",
-      "name": "管院2F 中庭小門",
+      "name": "管院二樓中庭大門",
       "type": "entrance",
-      "building": "mgmt",
       "coordinates": [
-        23.952286,
-        120.927333
+        23.952317,
+        120.927332
       ],
       "isPOI": true,
-      "isGroundLevel": true,
-      "floors": [
+      "building": "mgmt",
+      "buildingFloors": [
         2
-      ]
+      ],
+      "isGroundLevel": true
     },
     {
       "id": "elev_1773117745988_2_2y",
-      "name": "管院樓梯 2~5F",
+      "name": "樓梯",
       "type": "staircase",
-      "building": "mgmt",
       "coordinates": [
-        23.952332,
-        120.927227
+        23.952357,
+        120.927229
       ],
       "isPOI": false,
-      "floors": [
+      "building": "mgmt",
+      "buildingFloors": [
         2
       ]
     },
     {
       "id": "node_1773117794491",
-      "name": "管院1F中庭小門",
+      "name": "管院一樓中庭小門",
       "type": "entrance",
-      "building": "mgmt",
       "coordinates": [
         23.952265,
         120.92796
       ],
       "isPOI": true,
-      "isGroundLevel": true,
-      "floors": [
+      "building": "mgmt",
+      "buildingFloors": [
         1
-      ]
+      ],
+      "isGroundLevel": true
     },
     {
       "id": "node_1773164371035",
-      "name": "管院樓梯 1~5F",
+      "name": "樓梯",
       "type": "staircase",
+      "coordinates": [
+        23.952351,
+        120.928245
+      ],
+      "isPOI": false,
       "building": "mgmt",
-      "floors": [
+      "buildingFloors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773170318366",
+      "name": "室外樓梯",
+      "type": "staircase",
+      "coordinates": [
+        23.952369,
+        120.927636
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "realFloors": [
+        1,
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "node_1773170940182",
+      "name": "管院停車場小門",
+      "type": "entrance",
+      "coordinates": [
+        23.952537,
+        120.927349
+      ],
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
+        2
+      ],
+      "isGroundLevel": true
+    },
+    {
+      "id": "node_1773171581406",
+      "name": "室外樓梯",
+      "type": "staircase",
+      "coordinates": [
+        23.951989,
+        120.927881
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "realFloors": [
+        -1,
+        1
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "node_1773247309613",
+      "name": "洗手間",
+      "type": "wc",
+      "coordinates": [
+        23.952595,
+        120.927321
+      ],
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773252696128",
+      "name": "樓梯",
+      "type": "staircase",
+      "coordinates": [
+        23.952007,
+        120.927233
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "buildingFloors": [
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773252801479",
+      "name": "樓梯",
+      "type": "staircase",
+      "coordinates": [
+        23.951897,
+        120.927635
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "buildingFloors": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773252830234",
+      "name": "樓梯",
+      "type": "staircase",
+      "coordinates": [
+        23.951883,
+        120.927788
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "buildingFloors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773253482725",
+      "name": "洗手間",
+      "type": "wc",
+      "coordinates": [
+        23.951847,
+        120.928233
+      ],
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773253517097",
+      "name": "樓梯",
+      "type": "staircase",
+      "coordinates": [
+        23.951899,
+        120.928266
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "buildingFloors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773253582630",
+      "name": "洗手間",
+      "type": "wc",
+      "coordinates": [
+        23.952217,
+        120.928178
+      ],
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
+        -1,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "node_1773293610954",
+      "name": "管院戶外停車場",
+      "type": "parking",
+      "coordinates": [
+        23.952976,
+        120.927352
+      ],
+      "isPOI": true,
+      "buildingFloors": [
+        0
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "node_1773298393489",
+      "name": "管院一樓中庭大門",
+      "type": "entrance",
+      "coordinates": [
+        23.951964,
+        120.927724
+      ],
+      "isPOI": true,
+      "building": "mgmt",
+      "buildingFloors": [
+        1
+      ],
+      "isGroundLevel": true
+    },
+    {
+      "id": "node_1773298600486",
+      "name": "管院走廊往中庭通道",
+      "type": "entrance",
+      "coordinates": [
+        23.951955,
+        120.927877
+      ],
+      "isPOI": false,
+      "building": "mgmt",
+      "buildingFloors": [
+        1
+      ],
+      "isGroundLevel": true
+    },
+    {
+      "id": "node_1773326829010",
+      "name": "行政大樓一樓大門",
+      "type": "entrance",
+      "coordinates": [
+        23.951138,
+        120.930698
+      ],
+      "isPOI": true,
+      "building": "AB",
+      "buildingFloors": [
+        1
+      ],
+      "realFloors": [
+        -3
+      ],
+      "isGroundLevel": true
+    },
+    {
+      "id": "node_1773328300611",
+      "name": "圖書館一樓大門",
+      "type": "entrance",
+      "coordinates": [
+        23.951673,
+        120.926302
+      ],
+      "isPOI": true,
+      "building": "lib",
+      "buildingFloors": [
+        1
+      ],
+      "realFloors": [
+        2
+      ],
+      "isGroundLevel": true
+    },
+    {
+      "id": "node_1773383506198",
+      "name": "管院機車停車場",
+      "type": "parking",
+      "coordinates": [
+        23.952647,
+        120.926479
+      ],
+      "isPOI": true,
+      "buildingFloors": [
+        0
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    }
+  ],
+  "paths": [
+    {
+      "id": "path_1773204606719",
+      "points": [
+        [
+          23.951972,
+          120.927596
+        ],
+        [
+          23.951907,
+          120.928202
+        ],
+        [
+          23.952238,
+          120.928236
+        ],
+        [
+          23.952266,
+          120.927966
+        ],
+        [
+          23.952333,
+          120.928244
+        ],
+        [
+          23.951902,
+          120.928258
+        ],
+        [
+          23.951904,
+          120.928239
+        ],
+        [
+          23.951855,
+          120.928234
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          6,
+          5
+        ],
+        [
+          6,
+          7
+        ]
+      ],
+      "buildingFloors": [
         -1,
         1,
         2,
@@ -164,58 +611,832 @@
         4,
         5
       ],
-      "coordinates": [
-        23.952346,
-        120.92823
-      ],
-      "isPOI": false
+      "building": "mgmt"
     },
     {
-      "id": "node_1773170318366",
-      "name": "樓梯節點",
-      "type": "staircase",
-      "floors": [
+      "id": "path_1773243850888",
+      "points": [
+        [
+          23.951973,
+          120.927589
+        ],
+        [
+          23.952006,
+          120.927277
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "buildingFloors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "building": "mgmt"
+    },
+    {
+      "id": "path_1773243886949",
+      "points": [
+        [
+          23.951919,
+          120.927249
+        ],
+        [
+          23.952605,
+          120.927338
+        ],
+        [
+          23.952323,
+          120.927301
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "buildingFloors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "building": "mgmt"
+    },
+    {
+      "id": "path_1773292924390",
+      "points": [
+        [
+          23.952323,
+          120.92735
+        ],
+        [
+          23.952301,
+          120.927532
+        ],
+        [
+          23.952319,
+          120.927578
+        ],
+        [
+          23.952373,
+          120.927624
+        ],
+        [
+          23.952422,
+          120.927629
+        ],
+        [
+          23.952476,
+          120.927613
+        ],
+        [
+          23.952514,
+          120.927569
+        ],
+        [
+          23.952536,
+          120.927373
+        ],
+        [
+          23.952549,
+          120.927375
+        ],
+        [
+          23.952552,
+          120.927351
+        ],
+        [
+          23.952969,
+          120.927401
+        ],
+        [
+          23.952313,
+          120.927349
+        ],
+        [
+          23.952316,
+          120.927337
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          11,
+          12
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "building": "mgmt",
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773298869140",
+      "points": [
+        [
+          23.952368,
+          120.927645
+        ],
+        [
+          23.952334,
+          120.927941
+        ],
+        [
+          23.952266,
+          120.927934
+        ],
+        [
+          23.952353,
+          120.927776
+        ],
+        [
+          23.951971,
+          120.927726
+        ],
+        [
+          23.95204,
+          120.927738
+        ],
+        [
+          23.951991,
+          120.927874
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          3,
+          5
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "realFloors": [
+        1
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773321745102",
+      "points": [
+        [
+          23.952312,
+          120.927349
+        ],
+        [
+          23.952119,
+          120.927334
+        ],
+        [
+          23.952041,
+          120.927738
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "realFloors": [
         1,
         2
       ],
-      "coordinates": [
-        23.952364,
-        120.927658
-      ],
-      "isPOI": false,
       "building": "mgmt",
-      "isGroundLevel": true
+      "isOutdoor": true,
+      "pathType": "ramp"
     },
     {
-      "id": "node_1773170940182",
-      "name": "管院停車場 小門",
-      "type": "entrance",
-      "floors": [
+      "id": "path_1773326692876",
+      "points": [
+        [
+          23.951605,
+          120.926774
+        ],
+        [
+          23.951538,
+          120.927289
+        ],
+        [
+          23.951582,
+          120.927289
+        ],
+        [
+          23.951516,
+          120.928008
+        ],
+        [
+          23.95147,
+          120.928008
+        ],
+        [
+          23.951403,
+          120.928445
+        ],
+        [
+          23.951447,
+          120.928512
+        ],
+        [
+          23.951391,
+          120.928547
+        ],
+        [
+          23.951305,
+          120.929319
+        ],
+        [
+          23.951349,
+          120.92933
+        ],
+        [
+          23.951323,
+          120.929655
+        ],
+        [
+          23.951261,
+          120.929651
+        ],
+        [
+          23.951141,
+          120.930685
+        ],
+        [
+          23.951978,
+          120.929378
+        ],
+        [
+          23.950597,
+          120.929231
+        ],
+        [
+          23.951499,
+          120.927282
+        ],
+        [
+          23.951435,
+          120.928004
+        ],
+        [
+          23.951435,
+          120.928006
+        ],
+        [
+          23.951347,
+          120.928492
+        ],
+        [
+          23.951344,
+          120.92849
+        ],
+        [
+          23.951549,
+          120.927645
+        ],
+        [
+          23.951866,
+          120.927708
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          20
+        ],
+        [
+          20,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          8,
+          9
+        ],
+        [
+          9,
+          10
+        ],
+        [
+          10,
+          11
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          9,
+          13
+        ],
+        [
+          8,
+          14
+        ],
+        [
+          1,
+          15
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          4,
+          17
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          7,
+          19
+        ],
+        [
+          20,
+          21
+        ]
+      ],
+      "realFloors": [
+        -3,
+        -1,
+        1,
         2
       ],
-      "coordinates": [
-        23.952537,
-        120.927349
-      ],
-      "isPOI": true,
-      "building": "mgmt",
-      "isGroundLevel": true
+      "isOutdoor": true,
+      "pathType": "ramp"
     },
     {
-      "id": "node_1773171581406",
-      "name": "管院戶外樓梯 -1~1F",
-      "type": "staircase",
-      "floors": [
-        -1,
-        1
+      "id": "path_1773328338129",
+      "points": [
+        [
+          23.951668,
+          120.926334
+        ],
+        [
+          23.951618,
+          120.926681
+        ]
       ],
-      "coordinates": [
-        23.951974,
-        120.927879
+      "segments": [
+        [
+          0,
+          1
+        ]
       ],
-      "isPOI": false,
+      "realFloors": [
+        2
+      ],
+      "building": "lib",
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773328356592",
+      "points": [
+        [
+          23.952429,
+          120.926818
+        ],
+        [
+          23.950388,
+          120.926476
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773328405056",
+      "points": [
+        [
+          23.953401,
+          120.927057
+        ],
+        [
+          23.950718,
+          120.926626
+        ],
+        [
+          23.953036,
+          120.926998
+        ],
+        [
+          23.952977,
+          120.927345
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          2
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773328445939",
+      "points": [
+        [
+          23.952338,
+          120.927188
+        ],
+        [
+          23.952371,
+          120.926894
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "building": "mgmt",
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773328586624",
+      "points": [
+        [
+          23.951605,
+          120.926768
+        ],
+        [
+          23.951618,
+          120.926684
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773328608420",
+      "points": [
+        [
+          23.952418,
+          120.926899
+        ],
+        [
+          23.952429,
+          120.92682
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383552426",
+      "points": [
+        [
+          23.952463,
+          120.926825
+        ],
+        [
+          23.952429,
+          120.926818
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383568637",
+      "points": [
+        [
+          23.952469,
+          120.926826
+        ],
+        [
+          23.953495,
+          120.926983
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383589374",
+      "points": [
+        [
+          23.952676,
+          120.926241
+        ],
+        [
+          23.952616,
+          120.926845
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383613484",
+      "points": [
+        [
+          23.952429,
+          120.926817
+        ],
+        [
+          23.952589,
+          120.92573
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383631287",
+      "points": [
+        [
+          23.952465,
+          120.926826
+        ],
+        [
+          23.952626,
+          120.925736
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383656551",
+      "points": [
+        [
+          23.952522,
+          120.926459
+        ],
+        [
+          23.952645,
+          120.926479
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "realFloors": [
+        2
+      ],
+      "isOutdoor": true
+    },
+    {
+      "id": "path_1773383822653",
+      "points": [
+        [
+          23.952338,
+          120.927195
+        ],
+        [
+          23.952317,
+          120.927332
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "buildingFloors": [
+        2
+      ],
+      "building": "mgmt"
+    },
+    {
+      "id": "path_1773383855780",
+      "points": [
+        [
+          23.952371,
+          120.927233
+        ],
+        [
+          23.952363,
+          120.927306
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "buildingFloors": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "building": "mgmt"
+    },
+    {
+      "id": "path_1773383873334",
+      "points": [
+        [
+          23.952357,
+          120.927231
+        ],
+        [
+          23.952347,
+          120.927304
+        ]
+      ],
+      "segments": [
+        [
+          0,
+          1
+        ]
+      ],
+      "buildingFloors": [
+        2,
+        3,
+        4,
+        5
+      ],
       "building": "mgmt"
     }
-  ],
-  "paths": []
+  ]
 }
