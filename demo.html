@@ -2786,7 +2786,8 @@
           showExploreMode();
           return;
         }
-        activeFloor = getFloorsForBuilding(selectedBuilding)[0] || activeFloor;
+        const _bFloors = getFloorsForBuilding(selectedBuilding);
+        activeFloor = _bFloors.includes(1) ? 1 : (_bFloors[0] || activeFloor);
         updateFloorControlUI();
         renderFloorPicker();
         renderMap();
@@ -4099,7 +4100,7 @@
           const pickDefaultFloors = new Map();
           buildings.forEach(b => {
             const floors = getFloorsForBuilding(b.id);
-            pickDefaultFloors.set(b.id, floors.length > 0 ? floors[0] : 1);
+            pickDefaultFloors.set(b.id, floors.includes(1) ? 1 : (floors.length > 0 ? floors[0] : 1));
           });
 
           // Show POIs from all buildings + outdoor
