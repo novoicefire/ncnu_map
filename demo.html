@@ -3201,6 +3201,11 @@
       function selectPickBuilding(mode, buildingId) {
         pickListBuildingId = buildingId;
         renderPickList(mode, buildingId);
+        if (buildingId === '__outdoor__') {
+          focusOutdoorOnMap();
+        } else {
+          focusBuildingOnMap(buildingId);
+        }
       }
 
       function renderPickList(mode, preferredBuildingId = null) {
