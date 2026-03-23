@@ -476,26 +476,26 @@
       .route-sheet-scroll-region {
         overflow: hidden;
       }
+      .route-stats-bar {
+        flex-shrink: 0;
+        border-bottom: 1px solid rgba(216, 213, 207, 0.5);
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.5rem;
+      }
       .route-steps-shell {
         position: relative;
         min-height: 0;
+        flex: 1;
       }
-      .route-steps-shell::before,
       .route-steps-shell::after {
         content: '';
         position: absolute;
         left: 0;
         right: 0;
+        bottom: 0;
         height: 18px;
         pointer-events: none;
         z-index: 2;
-      }
-      .route-steps-shell::before {
-        top: 0;
-        background: linear-gradient(180deg, rgba(245, 243, 237, 0.96), rgba(245, 243, 237, 0));
-      }
-      .route-steps-shell::after {
-        bottom: 0;
         background: linear-gradient(0deg, rgba(245, 243, 237, 0.98), rgba(245, 243, 237, 0));
       }
       .with-fixed-sheet-footer {
@@ -503,10 +503,10 @@
       }
       .route-steps-scrollbox {
         min-height: 0;
-        max-height: min(50vh, calc(90vh - 260px));
+        max-height: min(55vh, calc(90vh - 220px));
         overflow-y: auto;
         overscroll-behavior: contain;
-        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
         padding-right: 0.5rem;
         scrollbar-width: thin;
         scrollbar-color: rgba(148, 163, 184, 0.75) transparent;
@@ -718,7 +718,7 @@
       <!-- 模式 B: 導航起終點雙欄 -->
       <div id="search-nav-mode" class="hidden-initial bg-white rounded-2xl shadow-soft border border-border px-3 py-2.5">
         <div id="nav-search-edit-panel" class="flex items-center gap-2">
-          <button onclick="cancelNavBar()" class="text-slate text-lg hover:text-dark transition-colors px-1" title="返回探索模式" aria-label="返回探索模式">
+          <button onclick="cancelNavBar()" class="text-slate text-lg hover:text-dark transition-colors px-1" title="返回上一步" aria-label="返回上一步">
             <i class="fa-solid fa-arrow-left"></i>
           </button>
           <div class="flex flex-col items-center gap-0.5 py-1">
@@ -908,7 +908,7 @@
       <div id="sheet-nav" class="hidden-initial sheet-mode-panel flex-col">
         <div class="sheet-scroll-region route-sheet-scroll-region with-fixed-sheet-footer px-6 pb-2 pt-2">
           <div id="route-options" class="flex flex-col gap-2 mb-4"></div>
-          <!-- 導航詳細步驟 (整合起終點、距離與時間) -->
+          <div id="route-stats-summary" class="route-stats-bar"></div>
           <div class="route-steps-shell">
             <div class="route-steps-scrollbox">
               <div id="nav-steps-container" class="flex flex-col"></div>
@@ -920,6 +920,7 @@
       <!-- ===== 模式 E: 導航進行中模式 ===== -->
       <div id="sheet-nav-active" class="hidden-initial sheet-mode-panel flex-col">
         <div class="sheet-scroll-region route-sheet-scroll-region with-fixed-sheet-footer px-6 pb-2 pt-2">
+          <div id="route-stats-active" class="route-stats-bar"></div>
           <div class="route-steps-shell">
             <div class="route-steps-scrollbox">
               <div id="nav-active-steps-container" class="flex flex-col"></div>
@@ -940,9 +941,6 @@
           </button>
         </div>
         <div id="sheet-action-nav-active" class="sheet-action-bar-group">
-          <button onclick="endNavigation()" class="w-full py-3 bg-white border border-red-300 text-red-500 rounded-xl text-sm font-bold shadow-sm active:bg-red-50 flex items-center justify-center gap-2" title="結束導航" aria-label="結束導航">
-            <i class="fa-solid fa-power-off"></i> 結束導航
-          </button>
         </div>
       </div>
     </div>
@@ -1471,6 +1469,7 @@
       let navMode = 'explore'; // explore | poi | nav-summary | nav-active
       let activeFilter = 'all'; // all | entrance | wc | elevator | office
       let editingNavField = null; // 'start' | 'end' | null （正在編輯哪個欄位）
+      let lastPickField = null; // 'start' | 'end' — 追蹤最後選取的是起點還是終點
       let currentTransitionAction = null;
       let currentNextTransitionTarget = null;
       let currentPrevTransitionTarget = null;
@@ -2841,8 +2840,8 @@
         const isNavigatingMode = mode === 'sheet-nav-active';
 
         navActions.classList.toggle('active', isRouteSummary);
-        activeNavActions.classList.toggle('active', isNavigatingMode);
-        actionBar.classList.toggle('visible', isRouteSummary || isNavigatingMode);
+        activeNavActions.classList.toggle('active', false);
+        actionBar.classList.toggle('visible', isRouteSummary);
         actionBar.setAttribute('aria-hidden', (!isRouteSummary && !isNavigatingMode).toString());
       }
 
@@ -3037,6 +3036,7 @@
         // 如果正在選取起點（pick-start模式）
         if (navMode === 'pick-start') {
           startNode = node;
+          lastPickField = 'start';
           if (startNode.id === destinationNode?.id) {
             showToast('起點與終點相同，請重新選擇');
             return;
@@ -3048,6 +3048,7 @@
         // 如果正在選取終點（pick-end模式）
         if (navMode === 'pick-end') {
           destinationNode = node;
+          lastPickField = 'end';
           if (startNode?.id === destinationNode.id) {
             showToast('起點與終點相同，請重新選擇');
             return;
@@ -3260,10 +3261,21 @@
         switchSheetMode('sheet-pick');
         updateSearchBarMode();
         ensureSheetVisible();
+
+        // Zoom out to show campus when first entering pick mode, then render
+        if (!preferredBuildingId && buildings.length >= 1) {
+          const allCenters = buildings.map(b => getBuildingCenter(b));
+          const bounds = L.latLngBounds(allCenters);
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [60, 60], maxZoom: 18, animate: false });
+          }
+        }
+        renderMap();
       }
 
       function setAsStart() {
         startNode = selectedNode;
+        lastPickField = 'start';
         showToast(`✓ 已設定起點：${startNode.name}`);
         destinationNode = null;
         renderMap();
@@ -3275,6 +3287,7 @@
       // 階段 1: 點「規劃路線」→ 檢查是否有起點
       function planRoute() {
         destinationNode = selectedNode;
+        lastPickField = 'end';
 
         if (!startNode) {
           renderPickList('start');
@@ -3293,6 +3306,7 @@
         requestCurrentLocation({ centerMap: true }).then((resolvedNode) => {
           startNode = resolvedNode || getDefaultLocationNode();
           if (!startNode) return;
+          lastPickField = 'start';
           renderMap();
           if (destinationNode) {
             showRouteSummary(getDefaultRouteKey());
@@ -3555,6 +3569,43 @@
         drawRoute(startNode, destinationNode);
       }
 
+      function updateRouteStatsBar(containerId) {
+        const statsId = containerId === 'nav-active-steps-container' ? 'route-stats-active' : 'route-stats-summary';
+        const statsEl = document.getElementById(statsId);
+        if (!statsEl) return;
+
+        const result = getSelectedRouteResult();
+        if (!result) { statsEl.innerHTML = ''; return; }
+
+        const { steps, currentStepIndex } = getCurrentRouteTimelineState(result);
+        const isActive = navMode === 'nav-active' && containerId === 'nav-active-steps-container';
+
+        let remainingDistance = result.actualDistance;
+        let remainingMinutes = result.estimatedMinutes;
+
+        if (isActive && currentStepIndex >= 0 && steps.length > 0) {
+          const currentTimelineStep = steps[currentStepIndex];
+          const rawCutoff = currentTimelineStep.routeStepStartIndex || 0;
+          let completedDistance = 0;
+          for (let i = 0; i < rawCutoff; i++) {
+            completedDistance += result.steps[i]?.actualDistance || 0;
+          }
+          remainingDistance = Math.max(0, result.actualDistance - completedDistance);
+          remainingMinutes = result.actualDistance > 0
+            ? result.estimatedMinutes * (remainingDistance / result.actualDistance)
+            : 0;
+        }
+
+        const label = isActive ? '剩餘' : '預估';
+        statsEl.innerHTML = `
+          <div class="flex items-center gap-4 text-sm font-bold text-dark">
+            <span><i class="fa-solid fa-person-walking text-sage mr-1"></i> ${formatMeters(remainingDistance)}</span>
+            <span><i class="fa-solid fa-clock text-slate mr-1"></i> ${formatMinutes(remainingMinutes)}</span>
+            <span class="text-[11px] text-slate font-normal ml-auto">${label}</span>
+          </div>
+        `;
+      }
+
       function renderRouteTimeline(containerId) {
         const stepsContainer = document.getElementById(containerId);
         attachRouteStepScrollGuard(containerId);
@@ -3564,17 +3615,10 @@
           const { steps, currentStepIndex } = getCurrentRouteTimelineState(result);
           const isActiveTimeline = containerId === 'nav-active-steps-container' && navMode === 'nav-active';
 
+          // Update sticky stats bar
+          updateRouteStatsBar(containerId);
+
           let html = '';
-          
-          // 頂部：總距離與時間
-          html += `
-            <div class="flex items-center justify-between mb-4 border-b border-border/50 pb-3">
-              <div class="text-sm text-dark font-bold flex gap-4">
-                <span><i class="fa-solid fa-person-walking text-sage mr-1"></i> ${formatMeters(result.actualDistance)}</span>
-                <span><i class="fa-solid fa-clock text-slate mr-1"></i> ${formatMinutes(result.estimatedMinutes)}</span>
-              </div>
-            </div>
-          `;
 
           // 時間軸起點
           html += `
@@ -3841,8 +3885,10 @@
         addRecentSearch(nodeId);
         if (editingNavField === 'start') {
           startNode = node;
+          lastPickField = 'start';
         } else {
           destinationNode = node;
+          lastPickField = 'end';
         }
         finishNavEdit();
         if (startNode && destinationNode) {
@@ -3871,9 +3917,59 @@
       function cancelNavBar() {
         finishNavEdit();
         if (isNavigating) { endNavigation(); return; }
+
+        // nav-summary → 回到上一個 pick 模式
+        if (navMode === 'nav-summary') {
+          clearRoutePreviewLayer();
+          cachedRouteResult = null;
+          routeOptions = [];
+          if (lastPickField === 'start') {
+            startNode = null;
+            renderPickList('start');
+          } else {
+            destinationNode = null;
+            renderPickList('end');
+          }
+          renderMap();
+          return;
+        }
+
+        // pick-start → 回到 destination 的 POI 詳情
+        if (navMode === 'pick-start') {
+          const returnNode = destinationNode;
+          startNode = null;
+          destinationNode = null;
+          lastPickField = null;
+          navMode = 'explore';
+          if (returnNode) {
+            selectNode(returnNode);
+          } else {
+            showExploreMode();
+            renderMap();
+          }
+          return;
+        }
+
+        // pick-end → 回到 start 的 POI 詳情
+        if (navMode === 'pick-end') {
+          const returnNode = startNode;
+          startNode = null;
+          destinationNode = null;
+          lastPickField = null;
+          navMode = 'explore';
+          if (returnNode) {
+            selectNode(returnNode);
+          } else {
+            showExploreMode();
+            renderMap();
+          }
+          return;
+        }
+
+        // 其他模式 → 回到探索
         startNode = null;
         destinationNode = null;
-        navMode = 'explore';
+        lastPickField = null;
         showExploreMode();
         renderMap();
       }
@@ -3977,6 +4073,84 @@
                 .addTo(markersLayer)
                 .on('click', (e) => { L.DomEvent.stopPropagation(e); selectNode(node); });
             });
+          }
+          return;
+        }
+
+        // Pick mode: show all buildings' POIs for cross-building selection
+        const isPickMode = navMode === 'pick-start' || navMode === 'pick-end';
+        if (isPickMode) {
+          // Building labels for orientation
+          buildings.forEach(building => {
+            const center = getBuildingCenter(building);
+            const iconClass = getBuildingLabelIcon(building);
+            const labelWidth = measureBuildingLabelWidth(building.name, iconClass);
+            const labelHeight = buildingLabelMetrics.height;
+            const icon = L.divIcon({
+              className: '',
+              html: `<div class="building-label rounded-full bg-white/95 border border-border shadow-soft text-xs font-bold text-dark"><span class="building-label-content"><span class="building-label-icon text-sage"><i class="fa-solid ${iconClass}"></i></span><span class="building-label-text">${building.name}</span></span></div>`,
+              iconSize: [labelWidth, labelHeight],
+              iconAnchor: [Math.round(labelWidth / 2), Math.round(labelHeight / 2)],
+            });
+            L.marker(center, { icon }).addTo(markersLayer);
+          });
+
+          // Determine default (ground) floor for each building
+          const pickDefaultFloors = new Map();
+          buildings.forEach(b => {
+            const floors = getFloorsForBuilding(b.id);
+            pickDefaultFloors.set(b.id, floors.length > 0 ? floors[0] : 1);
+          });
+
+          // Show POIs from all buildings + outdoor
+          nodes.forEach(node => {
+            if (!node.isPOI) return;
+            if (activeFilter !== 'all' && node.type !== activeFilter) return;
+            if (node.isOutdoor) {
+              // outdoor POIs always shown
+            } else if (node.building) {
+              const defFloor = pickDefaultFloors.get(node.building);
+              if (defFloor !== undefined) {
+                const nodeFloor = getNodeContextFloor(node, node.building);
+                if (nodeFloor !== defFloor && !node.isGroundLevel) return;
+              }
+            } else {
+              return;
+            }
+            let iconClass = typeof typeIcons !== 'undefined' ? (typeIcons[node.type] || "fa-location-dot") : "fa-location-dot";
+            let iconHtml = `<i class="fa-solid ${iconClass}"></i>`;
+            let extraClass = "poi";
+            if (node.type === "elevator" || node.type === "staircase") extraClass = "elevator";
+            const icon = L.divIcon({
+              className: `custom-marker ${extraClass}`,
+              html: iconHtml,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
+            });
+            L.marker(node.coordinates, { icon })
+              .addTo(markersLayer)
+              .on("click", (e) => { L.DomEvent.stopPropagation(e); selectNode(node); });
+          });
+
+          // Start marker
+          if (startNode) {
+            const startIcon = L.divIcon({
+              className: 'custom-marker start-marker start-pulse',
+              html: '<i class="fa-solid fa-person-walking"></i>',
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
+            });
+            L.marker(startNode.coordinates, { icon: startIcon, interactive: false }).addTo(markersLayer);
+          }
+          // End marker
+          if (destinationNode) {
+            const endIcon = L.divIcon({
+              className: 'custom-marker end-marker',
+              html: '<i class="fa-solid fa-flag-checkered"></i>',
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
+            });
+            L.marker(destinationNode.coordinates, { icon: endIcon, interactive: false }).addTo(markersLayer);
           }
           return;
         }
